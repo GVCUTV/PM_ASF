@@ -281,3 +281,37 @@
   - `etl/output/logs/enrich_feedback.log`
 - **Configuration:** Path risolti con `path_config.PROJECT_ROOT`; `--in-csv`, `--out-csv`, `--log-path` per override.
 - **Limitations:** I segnali derivati sono euristici e dipendono dalla presenza delle colonne review/CI nel dataset; se assenti, le colonne possono restare vuote o non essere prodotte.
+
+---
+
+## ETL Script: `etl/10_phase_duration_distribution_etl.py`
+
+**What it does**
+- Computes per-ticket phase boundary timestamps and durations (development, review, testing) directly from the raw Jira/GitHub exports.
+- Produces ticket-level duration outputs plus distribution summaries and histogram plots for each phase.
+
+**How it is implemented**
+- Loads Jira raw exports from `etl/output/csv/jira_tickets_raw.csv` (preferred) or falls back to `etl/output/csv/jira_issues_raw.csv`.
+- Loads GitHub PR exports from `etl/output/csv/github_prs_raw.csv`, extracts Jira keys with the `BOOKKEEPER-\d+` regex, and aggregates PR timestamps to derive review boundaries.
+- Normalizes all timestamps to UTC and derives phase boundaries according to the source-of-truth fallback rules:
+  - Dev start = Jira created timestamp.
+  - Review start = earliest PR created timestamp linked to the ticket.
+  - Review end = latest PR merged timestamp (falls back to PR close when merge is missing).
+  - Testing end = Jira resolution timestamp (falls back to review end if missing).
+- Calculates phase durations in hours and records exception reasons when boundaries are missing or invalid.
+- Computes distribution summaries (count, mean, median, variance, percentiles) and selects the best-fit distribution by log-likelihood among exponential, log-normal, and Weibull.
+- Generates histogram PNGs using a lightweight built-in renderer to avoid adding new dependencies.
+
+**How it must be used**
+- **Command:** `python etl/10_phase_duration_distribution_etl.py`
+- **Inputs:**
+  - `etl/output/csv/github_prs_raw.csv`
+  - `etl/output/csv/jira_tickets_raw.csv` (preferred) or `etl/output/csv/jira_issues_raw.csv` (fallback)
+- **Outputs:**
+  - `phase_durations.csv`
+  - `distribution_summary.csv`
+  - `distribution_summary.md`
+  - `plots/dev_phase_histogram.png`
+  - `plots/review_phase_histogram.png`
+  - `plots/testing_phase_histogram.png`
+- **Limitations:** Jira transition history is not consumed by this script; when transitions are unavailable the markdown summary prompts for user confirmation of fallback boundary inference.

@@ -1,6 +1,0 @@
-2026-01-31 21:46:36,363 - INFO - Convertita colonna a datetime: fields.created
-2026-01-31 21:46:36,367 - INFO - Convertita colonna a datetime: fields.resolutiondate
-2026-01-31 21:46:36,371 - INFO - Totale righe: 960
-2026-01-31 21:46:36,662 - WARNING - Ticket con anomalie (closed_without_resolution): BOOKKEEPER-976
-2026-01-31 21:46:36,711 - INFO - Ticket con anomalie rilevate: 1
-2026-01-31 21:46:37,490 - INFO - Grafico salvato in /home/cantarell/PycharmProjects/PM_ASF/etl/output/png/distribuzione_resolution_times_0_10000.png

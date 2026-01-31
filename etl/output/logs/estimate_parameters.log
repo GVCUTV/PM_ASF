@@ -1,6 +1,0 @@
-2026-01-31 21:46:26,309 - INFO - Convertita colonna a datetime: fields.created
-2026-01-31 21:46:26,313 - INFO - Convertita colonna a datetime: fields.resolutiondate
-2026-01-31 21:46:26,331 - INFO - Parametri globali salvati in /home/cantarell/PycharmProjects/PM_ASF/etl/output/csv/parameter_estimates.csv
-2026-01-31 21:46:26,353 - INFO - Statistiche di fase salvate in /home/cantarell/PycharmProjects/PM_ASF/etl/output/csv/phase_summary_stats.csv
-2026-01-31 21:46:26,367 - INFO - Durate di fase salvate in /home/cantarell/PycharmProjects/PM_ASF/etl/output/csv/phase_durations_wide.csv
-2026-01-31 21:46:27,488 - INFO - Backlog salvato in /home/cantarell/PycharmProjects/PM_ASF/etl/output/png/backlog_over_time.png

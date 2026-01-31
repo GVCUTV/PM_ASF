@@ -1,45 +1,22 @@
-# Ticket Resolution Phase Distribution Summary
+# Phase Duration Distribution Summary
 
-## Data Sources
-- GitHub PR raw data: `etl/output/csv/github_prs_raw.csv`
-- Jira raw data: `etl/output/csv/jira_issues_raw.csv`
+Source Jira file: `/home/cantarell/PycharmProjects/PM_ASF/etl/output/csv/jira_issues_raw.csv`.
+Source PR file: `/home/cantarell/PycharmProjects/PM_ASF/etl/output/csv/github_prs_raw.csv`.
 
-## Generated Plots
-- `plots/dev_phase_histogram.png`
-- `plots/review_phase_histogram.png`
-- `plots/testing_phase_histogram.png`
-
-## Phase Boundary Assumptions
+## Phase boundary assumptions
 - Dev start: Jira issue creation timestamp.
-- Review start: first GitHub PR creation timestamp linked to the Jira key.
-- Review end / testing start: latest PR merge (or close) timestamp for the Jira key.
-- Testing end: Jira resolution timestamp (fallback to PR merge/close when missing).
+- Review start: earliest PR creation timestamp linked to the Jira key.
+- Review end: latest PR merge timestamp (fallback to PR close if merge missing).
+- Testing end: Jira resolution timestamp (fallback to review end if missing).
 
-## Distribution Fit Summary
-### Dev Phase
-- Count: 188
-- Mean (hours): 4027.9732
-- Median (hours): 16.8603
-- Variance (hours^2): 131775124.3210
-- Best-fit distribution (log-likelihood comparison): lognormal
+## Distribution summary
+- **dev**: 190 samples, best fit `lognormal`.
+- **review**: 190 samples, best fit `weibull`.
+- **testing**: 122 samples, best fit `lognormal`.
 
-### Review Phase
-- Count: 190
-- Mean (hours): 918.1168
-- Median (hours): 189.7725
-- Variance (hours^2): 9397190.1846
-- Best-fit distribution (log-likelihood comparison): weibull
-
-### Testing Phase
-- Count: 105
-- Mean (hours): 278.5250
-- Median (hours): 0.0131
-- Variance (hours^2): 1266977.5448
-- Best-fit distribution (log-likelihood comparison): lognormal
-
-## Missing or Inferred Boundaries
-- Tickets with missing boundaries: 975
-- Example ticket keys: BOOKKEEPER-1, BOOKKEEPER-10, BOOKKEEPER-100, BOOKKEEPER-1000, BOOKKEEPER-1001, BOOKKEEPER-1002, BOOKKEEPER-1003, BOOKKEEPER-1004, BOOKKEEPER-1005, BOOKKEEPER-1006
+## Missing boundary diagnostics
+Tickets with missing/invalid boundaries: 973.
+Sample keys: BOOKKEEPER-7, BOOKKEEPER-680, BOOKKEEPER-14, BOOKKEEPER-10, BOOKKEEPER-691, BOOKKEEPER-694, BOOKKEEPER-13, BOOKKEEPER-2, BOOKKEEPER-8, BOOKKEEPER-3.
 
 ### PROMPT FOR THE USER
-The Jira dataset `jira_tickets_raw.csv` was not found in the repository, and no status-transition history is available in the fallback Jira export. Please provide the expected Jira ticket export with transition timestamps (or confirm that the fallback file should be used) so phase boundaries can be derived reliably for all tickets.
+Jira transition data was not available in the raw export. Please provide Jira transition timestamps or confirm that the fallback boundary inference rules should remain authoritative.
