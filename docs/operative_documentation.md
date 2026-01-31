@@ -257,3 +257,27 @@
 - **Outputs:** `etl/output/csv/fit_summary.csv`, `etl/output/logs/export_fit_summary.log`.
 - **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`; use `--base-dir` and `--out-csv` to override locations.
 - **Limitations:** The script fails fast if input CSVs are missing required columns or if no metric column is found.
+
+---
+
+## ETL Script: `etl/9_enrich_feedback_cols.py`
+
+**What it does**
+- Arricchisce il dataset `tickets_prs_merged.csv` con segnali di feedback review/CI e ruoli stimati (developer/tester).
+- Deriva colonne aggiuntive utili per analisi del rework e feedback loop (review rounds, richieste modifiche, esito CI).
+
+**How it is implemented**
+- Carica il merged CSV e calcola `review_rounds` usando `reviews_count` quando disponibile o il numero di stati in `pull_request_review_states`.
+- Imposta `review_rework_flag` quando `requested_changes_count` è maggiore di zero o quando lo stato review include `CHANGES_REQUESTED`.
+- Interpreta le liste JSON di `check_runs_conclusions` e/o `combined_status_states` per stimare `ci_failed_then_fix` (fallimento seguito da successo).
+- Deduce `dev_user` da colonne prioritizzate (autore PR, assegnatario, assignee Jira) e `tester` da reviewer richiesti o reporter Jira.
+- Registra log di copertura per le colonne arricchite e salva il CSV di output.
+
+**How it must be used**
+- **Command:** `python etl/9_enrich_feedback_cols.py`
+- **Inputs:** `etl/output/csv/tickets_prs_merged.csv` (da `etl/3_clean_and_merge.py`).
+- **Outputs:**
+  - `etl/output/csv/tickets_prs_merged.csv` (default, sovrascrive l’input) oppure un percorso specificato con `--out-csv`.
+  - `etl/output/logs/enrich_feedback.log`
+- **Configuration:** Path risolti con `path_config.PROJECT_ROOT`; `--in-csv`, `--out-csv`, `--log-path` per override.
+- **Limitations:** I segnali derivati sono euristici e dipendono dalla presenza delle colonne review/CI nel dataset; se assenti, le colonne possono restare vuote o non essere prodotte.
