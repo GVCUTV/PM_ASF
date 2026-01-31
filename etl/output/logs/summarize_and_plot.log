@@ -1,0 +1,6 @@
+2026-01-31 21:46:18,535 - INFO - Ticket totali: 960
+2026-01-31 21:46:18,551 - INFO - Ticket riaperti: 3 (0.3%)
+2026-01-31 21:46:18,561 - INFO - In Progress: 3 (0.3%)
+2026-01-31 21:46:18,573 - INFO - Ticket chiusi senza PR: 699 (72.8%)
+2026-01-31 21:46:19,308 - INFO - Grafico a torta salvato in ./output/png/distribuzione_ticket_tipo.png
+2026-01-31 21:46:19,311 - INFO - Statistiche esportate in ./output/statistiche_riassuntive.csv
