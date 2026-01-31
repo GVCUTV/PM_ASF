@@ -715,3 +715,219 @@ A defining feature of discrete-event simulation:
 ---
 
 **End of Chapter 3**
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 4 — Statistics
+-->
+
+# Chapter 4 — Statistics
+
+Statistical analysis is essential in discrete-event simulation because simulation output
+is **random**. This chapter develops basic statistical tools required to summarize and
+interpret simulation results.
+
+---
+
+## Sections
+- 4.1 Sample Statistics (`uvs`)
+- 4.2 Discrete-Data Histograms (`ddh`)
+- 4.3 Continuous-Data Histograms (`cdh`)
+- 4.4 Correlation (`bvs`, `acs`) *(optional)*
+
+---
+
+## 4.1 Sample Statistics
+
+Simulation output consists of **observations**:
+```
+
+x1, x2, ..., xn
+
+```
+
+These observations are treated as realizations of a random variable.
+
+---
+
+### Sample Mean
+
+The **sample mean** estimates the expected value:
+
+```
+
+x̄ = (1/n) Σ xi
+
+```
+
+Properties:
+- unbiased estimator of E[X]
+- variance decreases as n increases
+
+---
+
+### Sample Variance
+
+The **sample variance** estimates variability:
+
+```
+
+s² = (1/(n−1)) Σ (xi − x̄)²
+
+```
+
+The denominator `(n−1)` makes the estimator unbiased.
+
+---
+
+### Sample Standard Deviation
+
+```
+
+s = √s²
+
+```
+
+Provides a measure of dispersion in the same units as the data.
+
+---
+
+### Interpretation
+
+- Mean → central tendency
+- Variance / standard deviation → variability
+- Both are required to understand performance
+
+---
+
+## 4.2 Discrete-Data Histograms
+
+A **histogram** approximates the probability mass function of a discrete random variable.
+
+---
+
+### Construction
+
+1. Partition values into discrete categories
+2. Count occurrences in each category
+3. Normalize by total number of observations
+
+```
+
+p̂(x) = count(x) / n
+
+```
+
+---
+
+### Properties
+
+- Visualizes distribution shape
+- Approximates probabilities
+- Useful for detecting anomalies
+
+---
+
+### Program `ddh`
+
+- Reads discrete data
+- Produces frequency tables
+- Outputs normalized histograms
+
+---
+
+## 4.3 Continuous-Data Histograms
+
+Continuous data must be **binned**.
+
+---
+
+### Binning
+
+- Divide range into intervals (bins)
+- Count observations per bin
+- Normalize by bin width and sample size
+
+```
+
+f̂(x) = count(bin) / (n × bin width)
+
+```
+
+---
+
+### Trade-offs
+
+- Too few bins → loss of detail
+- Too many bins → excessive noise
+
+Bin width selection is critical.
+
+---
+
+### Program `cdh`
+
+- Builds histograms for continuous data
+- Supports adjustable bin widths
+- Outputs density estimates
+
+---
+
+## 4.4 Correlation *(Optional)*
+
+Simulation output observations are often **correlated**.
+
+---
+
+### Sample Covariance
+
+For paired observations `(xi, yi)`:
+
+```
+
+cov(x, y) = (1/(n−1)) Σ (xi − x̄)(yi − ȳ)
+
+```
+
+---
+
+### Correlation Coefficient
+
+```
+
+ρ̂ = cov(x, y) / (sx sy)
+
+```
+
+Range:
+```
+
+−1 ≤ ρ̂ ≤ 1
+
+```
+
+---
+
+### Implications
+
+- Correlation violates independence assumptions
+- Classical statistical formulas may fail
+- Output analysis must account for dependence
+
+---
+
+## Summary
+
+- Simulation output is random and must be analyzed statistically
+- Sample mean and variance are fundamental
+- Histograms reveal distribution shape
+- Correlation is common in time-series output
+- Ignoring variability leads to invalid conclusions
+
+---
+
+**End of Chapter 4**
