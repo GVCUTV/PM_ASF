@@ -1136,3 +1136,224 @@ Next-event simulation facilitates:
 ---
 
 **End of Chapter 5**
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 6 — Discrete Random Variables
+-->
+
+# Chapter 6 — Discrete Random Variables
+
+Discrete random variables play a central role in simulation when modeling systems with
+**finite or countable outcomes**, such as routing decisions, inventory demands, or batch
+sizes.
+
+This chapter introduces discrete random variables and methods for **generating them from
+uniform random numbers**.
+
+---
+
+## Sections
+- 6.1 Discrete Random Variables
+- 6.2 Generating Discrete Random Variables
+- 6.3 Discrete Random Variable Applications (`sis4`)
+- 6.4 Discrete Random Variable Models *(optional)*
+- 6.5 Random Sampling and Shuffling *(optional)*
+
+---
+
+## 6.1 Discrete Random Variables
+
+A **discrete random variable** takes values from a finite or countable set.
+
+---
+
+### Probability Mass Function (PMF)
+
+For a discrete random variable `X`:
+
+```
+
+P(X = x) = f(x)
+
+```
+
+Properties:
+- `f(x) ≥ 0`
+- `Σ f(x) = 1`
+
+---
+
+### Expected Value
+
+```
+
+E[X] = Σ x f(x)
+
+```
+
+---
+
+### Variance
+
+```
+
+Var(X) = E[(X − E[X])²]
+
+```
+
+---
+
+### Cumulative Distribution Function (CDF)
+
+```
+
+F(x) = P(X ≤ x) = Σ_{y ≤ x} f(y)
+
+```
+
+The CDF is non-decreasing and right-continuous.
+
+---
+
+## 6.2 Generating Discrete Random Variables
+
+Simulation requires transforming `U ~ U(0,1)` into a discrete random variable.
+
+---
+
+### Inverse Transform Method
+
+Let `U ~ U(0,1)`.
+
+Choose `X = x_i` if:
+
+```
+
+F(x_{i−1}) < U ≤ F(x_i)
+
+```
+
+This method:
+- is simple
+- works for any discrete distribution
+- requires computation of the CDF
+
+---
+
+### Algorithm — Discrete Inverse Transform
+
+1. Generate `U`
+2. Find smallest `x_i` such that `F(x_i) ≥ U`
+3. Return `x_i`
+
+---
+
+### Computational Considerations
+
+- Linear search is acceptable for small support
+- Binary search improves efficiency for large support
+- Precomputed CDF tables are commonly used
+
+---
+
+## 6.3 Discrete Random Variable Applications
+
+### Inventory Demand (`sis4`)
+
+Discrete demand sizes are often modeled using:
+- empirical distributions
+- geometric distributions
+- custom PMFs
+
+Simulation steps:
+1. Generate demand size
+2. Update inventory level
+3. Trigger reorder logic if needed
+
+---
+
+### Routing Decisions
+
+Discrete random variables determine:
+- next node in a network
+- customer class
+- job type
+
+Routing probabilities must sum to 1.
+
+---
+
+## 6.4 Discrete Random Variable Models *(Optional)*
+
+Common discrete distributions:
+- Bernoulli
+- Binomial
+- Geometric
+- Poisson
+
+These models arise naturally in:
+- arrivals
+- failures
+- batch processes
+
+---
+
+### Example — Bernoulli
+
+```
+
+P(X = 1) = p
+P(X = 0) = 1 − p
+
+```
+
+---
+
+### Example — Geometric
+
+Models number of trials until first success.
+
+---
+
+## 6.5 Random Sampling and Shuffling *(Optional)*
+
+Simulation often requires:
+- sampling without replacement
+- random permutations
+
+---
+
+### Sampling Without Replacement
+
+Used when:
+- selecting items from a finite population
+- modeling depletion effects
+
+---
+
+### Random Shuffling
+
+Produces a random permutation of elements.
+
+Applications:
+- randomized service order
+- randomized experiment design
+
+---
+
+## Summary
+
+- Discrete random variables model finite outcomes
+- PMF and CDF define distributions
+- Inverse transform enables generation
+- Discrete models are essential in simulation
+- Efficient algorithms improve scalability
+
+---
+
+**End of Chapter 6**
