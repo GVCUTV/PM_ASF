@@ -931,3 +931,208 @@ Range:
 ---
 
 **End of Chapter 4**
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 5 — Next-Event Simulation
+-->
+
+# Chapter 5 — Next-Event Simulation
+
+This chapter presents the **next-event simulation paradigm**, the most common and
+powerful approach for implementing discrete-event simulation models.
+
+Time advances directly to the next scheduled event, avoiding unnecessary computation
+between events.
+
+---
+
+## Sections
+- 5.1 Next-Event Simulation (`ssq3`)
+- 5.2 Next-Event Simulation Examples (`sis3`, `msq`)
+- 5.3 Event List Management (`ttr`) *(optional)*
+
+---
+
+## 5.1 Next-Event Simulation
+
+In next-event simulation, the simulation clock is always equal to the **time of the most
+recent event**.
+
+Future events are stored explicitly and processed in chronological order.
+
+---
+
+### Event List
+
+An **event list** contains:
+- event time
+- event type
+- event-specific data
+
+The next event is the one with **minimum event time**.
+
+---
+
+### Simulation Clock Advancement
+
+```
+
+t ← time of next event
+
+```
+
+Time never advances continuously — only at event times.
+
+---
+
+### Event Types in a Single-Server Queue
+
+Typical events:
+- **arrival**
+- **departure**
+
+Each event has a corresponding event-handling routine.
+
+---
+
+### Single-Server Queue (`ssq3`)
+
+State variables:
+- server status (idle / busy)
+- number of jobs in queue
+
+---
+
+#### Arrival Event
+
+1. Advance clock to arrival time
+2. Schedule next arrival
+3. If server idle:
+   - start service
+   - schedule departure
+4. Else:
+   - enqueue job
+
+---
+
+#### Departure Event
+
+1. Advance clock to departure time
+2. If queue empty:
+   - server becomes idle
+3. Else:
+   - remove job from queue
+   - schedule its departure
+
+---
+
+### Advantages Over Trace-Driven Simulation
+
+- No need to pre-generate arrival times
+- Natural handling of stochastic processes
+- Better extensibility
+
+---
+
+## 5.2 Next-Event Simulation Examples
+
+### Inventory System (`sis3`)
+
+State variables:
+- inventory level
+- outstanding orders
+
+Events:
+- **demand arrival**
+- **order arrival**
+
+Replenishment decisions are triggered by inventory thresholds.
+
+---
+
+### Multi-Server Queue (`msq`)
+
+Extends the single-server model to:
+- multiple parallel servers
+- shared queue
+
+State variables:
+- number of busy servers
+- queue length
+
+---
+
+### Scheduling Logic
+
+- Assign jobs to idle servers immediately
+- Queue jobs when all servers are busy
+- Departures free servers and may trigger service
+
+---
+
+## 5.3 Event List Management *(Optional)*
+
+Efficient event list management is critical for performance.
+
+---
+
+### Data Structures
+
+Common choices:
+- ordered linked lists
+- binary heaps
+- priority queues
+
+Trade-offs:
+- insertion cost
+- deletion cost
+- memory overhead
+
+---
+
+### Program `ttr`
+
+Implements:
+- time-ordered event list
+- efficient insert/remove operations
+- reusable event list abstraction
+
+---
+
+## Statistics Collection
+
+In next-event simulation, statistics are updated:
+- at each event
+- when state variables change
+
+Time-weighted statistics require tracking:
+- time since last event
+- current state value
+
+---
+
+## Verification and Debugging
+
+Next-event simulation facilitates:
+- step-by-step tracing
+- event-level debugging
+- deterministic replay using fixed seeds
+
+---
+
+## Summary
+
+- Next-event simulation advances time by events
+- Event lists are central data structures
+- Arrival and departure logic defines behavior
+- Extensible to complex systems
+- Efficient event management improves scalability
+
+---
+
+**End of Chapter 5**
