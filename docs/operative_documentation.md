@@ -183,3 +183,26 @@
   - `etl/output/logs/estimate_parameters.log`
 - **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
 - **Limitations:** If required timestamp or phase columns are missing, the script logs warnings and skips or leaves related metrics as `NaN`.
+
+---
+
+## ETL Script: `etl/6_diagnose_and_plot_tickets.py`
+
+**What it does**
+- Provides per-ticket diagnostics to surface data quality issues in the merged dataset.
+- Computes resolution time in hours (when possible) and plots its distribution between 0 and 10,000 hours.
+
+**How it is implemented**
+- Loads `etl/output/csv/tickets_prs_merged.csv` and resolves key columns for ticket ID, creation date, resolution date, status, and issue type.
+- Converts creation/resolution timestamps to timezone-naive datetimes and derives `resolution_time_hours` either from those timestamps or from `resolution_time_days` when timestamps are unavailable.
+- Iterates each ticket to print a diagnostic line and flags common inconsistencies (missing key, missing creation, resolution before creation, closed without resolution date, negative resolution time).
+- Builds a histogram of valid resolution times (0–10,000 hours) with bin count scaled to sample size and saves the plot.
+
+**How it must be used**
+- **Command:** `python etl/6_diagnose_and_plot_tickets.py`
+- **Inputs:** `etl/output/csv/tickets_prs_merged.csv`
+- **Outputs:**
+  - `etl/output/png/distribuzione_resolution_times_0_10000.png`
+  - `etl/output/logs/diagnose_tickets.log`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+- **Limitations:** The script prints per-ticket diagnostics to stdout, which can be verbose on large datasets; histogram generation is skipped when no valid resolution-time data is available.
