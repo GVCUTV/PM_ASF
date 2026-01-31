@@ -1,4 +1,4 @@
-<!-- v1 -->
+<!-- v2 -->
 <!-- filename: AGENTS.md -->
 
 # PMCSN ASF — Unified AGENTS.md (Codex-Driven Workflow)
@@ -23,7 +23,7 @@ Codex is responsible for *all* execution-level work, including:
 - Updating or generating Python modules, configs, sweep definitions, analysis scripts, CSV output logic, logs, and plots.  
 - Validating numerical and statistical correctness (means, CI, percentiles, variance, heavy-tailed behavior).  
 - Ensuring reproducibility and deterministic seeding when needed.  
-- Maintaining documentation accuracy when required.  
+- Maintaining documentation accuracy and consistency.  
 - Producing diffs, full files, or new files exactly as GPT instructs.  
 - Reporting uncertainties or missing details when constraints are unclear.
 
@@ -104,7 +104,63 @@ If validation fails, Codex must explicitly describe the failure.
 
 ---
 
-# 6) Codex Prompt Execution Rules
+# 6) Documentation Obligations (Mandatory)
+
+## 6.1 Operative Documentation Updates
+
+**Every time Codex introduces a new functionality**, Codex **must** append a **new section** to:
+
+```
+
+docs/operative_documentation.md
+
+```
+
+Each appended section must clearly and explicitly describe:
+
+- **What the functionality does** (behavioral and conceptual description).  
+- **How it is implemented** (modules involved, workflow changes, algorithms, assumptions).  
+- **How it must be used** (inputs, configuration, execution steps, outputs, limitations).
+
+The appended section must be written in a way that makes `docs/operative_documentation.md` usable as an operational and technical reference for future development and validation.
+
+## 6.2 Consistency Requirement
+
+Whenever Codex:
+
+- modifies existing functionality,  
+- changes behavior,  
+- refactors workflows,  
+- alters simulation logic, parameters, or outputs,
+
+Codex **must ensure that `docs/operative_documentation.md` remains fully consistent** with the current state of the codebase.
+
+Outdated or contradictory documentation is **not allowed**.
+
+---
+
+# 7) Immutable Source of Truth Rule
+
+The file:
+
+```
+
+docs/source_of_truth.md
+
+````
+
+**MUST NEVER be modified by Codex**, under any circumstances, **unless the user explicitly and unambiguously requests it** in the macro-prompt.
+
+- No indirect edits  
+- No refactoring  
+- No alignment changes  
+- No wording adjustments  
+
+If Codex detects an inconsistency involving `docs/source_of_truth.md`, it must **report it**, not fix it.
+
+---
+
+# 8) Codex Prompt Execution Rules
 
 Codex must fully honor every section of the macro-prompt:
 
@@ -152,7 +208,7 @@ Codex may internally decompose tasks but must output only what the macro-prompt 
 
 ---
 
-# 7) Output Formatting Rules
+# 9) Output Formatting Rules
 
 Codex must:
 
@@ -164,7 +220,7 @@ Codex must:
 
 ---
 
-# 8) Human-Intervention Markers
+# 10) Human-Intervention Markers
 
 Codex must insert a user prompt when:
 
@@ -182,7 +238,7 @@ The marker must follow this exact template:
 
 ---
 
-# 9) Validation Rules
+# 11) Validation Rules
 
 Before finalizing output, Codex must verify:
 
@@ -192,12 +248,14 @@ Before finalizing output, Codex must verify:
 * No off-scope files were changed.
 * Modeling behavior remains consistent unless intentionally modified.
 * Statistical results, random sampling behavior, and sweep logic remain coherent.
+* Operative documentation has been updated when required.
+* `docs/source_of_truth.md` has not been modified unless explicitly requested.
 
 If validation fails, Codex must report the issue clearly.
 
 ---
 
-# 10) Codex Behavioral Checklist
+# 12) Codex Behavioral Checklist
 
 Before completing any task, Codex must confirm:
 
@@ -205,6 +263,8 @@ Before completing any task, Codex must confirm:
 * ☐ I read all files listed in the GPT macro-prompt.
 * ☐ I did not rely on memory from previous runs.
 * ☐ I modified only the allowed files.
+* ☐ I updated `docs/operative_documentation.md` when introducing or modifying functionality.
+* ☐ I did not modify `docs/source_of_truth.md` unless explicitly instructed.
 * ☐ My output matches the exact requested format.
 * ☐ I followed simulation/modeling/statistical constraints.
 * ☐ I inserted PROMPT FOR THE USER where necessary.
