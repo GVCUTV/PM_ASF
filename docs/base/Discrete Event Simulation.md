@@ -1,6 +1,89 @@
 <!--
 Discrete-Event Simulation: A First Course
 Lawrence Leemis, Steve Park
+Table of Contents (without page numbers)
+-->
+
+# Contents
+
+## Chapter 1 — Models
+- 1.1 Introduction  
+- 1.2 A Single-Server Queue (program `ssq1`)  
+- 1.3 A Simple Inventory System (program `sis1`)  
+
+## Chapter 2 — Random Number Generation
+- 2.1 Lehmer Random Number Generation: Introduction  
+- 2.2 Lehmer Random Number Generation: Implementation (library `rng`)  
+- 2.3 Monte Carlo Simulation (programs `galileo` and `buffon`)  
+- 2.4 Monte Carlo Simulation Examples  
+- 2.5 Finite-State Sequences  
+
+## Chapter 3 — Discrete-Event Simulation
+- 3.1 Discrete-Event Simulation (programs `ssq2` and `sis2`)  
+- 3.2 Multi-Stream Lehmer Random Number Generation (library `rngs`)  
+- 3.3 Discrete-Event Simulation Models (program `ssms`)  
+
+## Chapter 4 — Statistics
+- 4.1 Sample Statistics (program `uvs`)  
+- 4.2 Discrete-Data Histograms (program `ddh`)  
+- 4.3 Continuous-Data Histograms (program `cdh`)  
+- 4.4 Correlation (programs `bvs` and `acs`)  
+
+## Chapter 5 — Next-Event Simulation
+- 5.1 Next-Event Simulation (program `ssq3`)  
+- 5.2 Next-Event Simulation Examples (programs `sis3` and `msq`)  
+- 5.3 Event List Management (program `ttr`)  
+
+## Chapter 6 — Discrete Random Variables
+- 6.1 Discrete Random Variables  
+- 6.2 Generating Discrete Random Variables  
+- 6.3 Discrete Random Variable Applications (program `sis4`)  
+- 6.4 Discrete Random Variable Models  
+- 6.5 Random Sampling and Shuffling  
+
+## Chapter 7 — Continuous Random Variables
+- 7.1 Continuous Random Variables  
+- 7.2 Generating Continuous Random Variables  
+- 7.3 Continuous Random Variable Applications (program `ssq4`)  
+- 7.4 Continuous Random Variable Models  
+- 7.5 Nonstationary Poisson Processes  
+- 7.6 Acceptance–Rejection  
+
+## Chapter 8 — Output Analysis
+- 8.1 Interval Estimation (program `estimate`)  
+- 8.2 Monte Carlo Estimation  
+- 8.3 Finite-Horizon and Infinite-Horizon Statistics  
+- 8.4 Batch Means  
+- 8.5 Steady-State Single-Server Service Node Statistics  
+
+## Chapter 9 — Input Modeling
+- 9.1 Trace-Driven Modeling of Stationary Processes  
+- 9.2 Parametric Modeling of Stationary Processes  
+- 9.3 Modeling Nonstationary Processes  
+
+## Chapter 10 — Projects
+- 10.1 Empirical Tests of Randomness  
+- 10.2 Birth–Death Processes  
+- 10.3 Finite-State Markov Chains  
+- 10.4 A Network of Single-Server Service Nodes  
+
+## Appendices
+- Appendix A — Simulation Languages  
+- Appendix B — Integer Arithmetic (program `sieve`)  
+- Appendix C — Parameter Estimation Summary  
+- Appendix D — Random Variate Models (library `rvms`)  
+- Appendix E — Random Variate Generators (library `rvgs`)  
+- Appendix F — Correlation and Independence  
+- Appendix G — Error in Discrete-Event Simulation  
+
+## References
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
 Chapter 1 — Models
 -->
 
@@ -2264,3 +2347,142 @@ They are suitable as:
 ---
 
 **End of Chapter 10**
+
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Appendices A–G
+-->
+
+# Appendices
+
+---
+
+## Appendix A — Simulation Languages
+
+This appendix surveys **special-purpose simulation languages** designed specifically
+for discrete-event simulation.
+
+### Characteristics
+- Built-in event scheduling
+- Automatic time advance
+- Integrated statistics collection
+- Often include animation
+
+### Examples
+- GPSS
+- SIMAN
+- SLAM II
+- SIMSCRIPT II.5
+
+### Trade-offs
+- Faster prototyping
+- Less flexibility than general-purpose languages
+- Often proprietary and expensive
+
+The book favors **general-purpose languages** for educational clarity and control.
+
+---
+
+## Appendix B — Integer Arithmetic (`sieve`)
+
+This appendix reviews **integer arithmetic issues** relevant to simulation, especially
+random number generation.
+
+### Topics
+- Integer overflow
+- Modulus arithmetic
+- Precision limits
+
+### Purpose
+Correct integer arithmetic is essential for:
+- pseudo-random number generators
+- reproducibility
+- correctness of simulations
+
+---
+
+## Appendix C — Parameter Estimation Summary
+
+This appendix summarizes methods for **estimating distribution parameters** from data.
+
+### Covered Techniques
+- Method of moments
+- Maximum likelihood estimation (MLE)
+
+### Goal
+Provide quick reference formulas used in **input modeling**.
+
+---
+
+## Appendix D — Random Variate Models (`rvms`)
+
+This appendix presents **standard random variable models** used in simulation.
+
+### Distributions
+- Discrete and continuous models
+- Analytical forms
+- Parameter interpretation
+
+### Usage
+Serves as a reference catalog for selecting appropriate distributions.
+
+---
+
+## Appendix E — Random Variate Generators (`rvgs`)
+
+This appendix describes **algorithms for generating random variables** from `U(0,1)`.
+
+### Methods
+- Inverse transform
+- Composition
+- Acceptance–rejection
+
+### Emphasis
+- Correctness
+- Efficiency
+- Numerical stability
+
+---
+
+## Appendix F — Correlation and Independence
+
+This appendix discusses:
+- correlation
+- dependence
+- implications for statistical analysis
+
+### Key Insight
+Simulation output is often **correlated**, invalidating classical statistical assumptions.
+
+### Relevance
+Critical for:
+- output analysis
+- confidence interval construction
+- steady-state estimation
+
+---
+
+## Appendix G — Error in Discrete-Event Simulation
+
+This appendix provides a **conceptual framework for simulation error**.
+
+### Types of Error
+- Model error (conceptual/specification)
+- Input error
+- Statistical error
+- Implementation error
+
+### Key Principle
+Increasing computational precision does **not** compensate for modeling errors.
+
+### Purpose
+Encourage disciplined verification, validation, and skepticism toward results.
+
+---
+
+**End of Appendices**
