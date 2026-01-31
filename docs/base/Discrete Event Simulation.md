@@ -1616,3 +1616,263 @@ where `c` bounds `f(x)/g(x)`.
 ---
 
 **End of Chapter 7**
+
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 8 — Output Analysis
+-->
+
+# Chapter 8 — Output Analysis
+
+The purpose of output analysis is to extract **reliable performance measures** from
+simulation output. Because simulation models are stochastic, output data must be treated
+using **statistical methods**.
+
+A central challenge is that simulation observations are often **correlated**, especially
+in steady-state simulations.
+
+---
+
+## Sections
+- 8.1 Interval Estimation (`estimate`)
+- 8.2 Monte Carlo Estimation
+- 8.3 Finite-Horizon and Infinite-Horizon Statistics
+- 8.4 Batch Means
+- 8.5 Steady-State Single-Server Statistics *(optional)*
+
+---
+
+## 8.1 Interval Estimation
+
+Point estimates alone are insufficient; we must quantify **uncertainty**.
+
+---
+
+### Confidence Intervals
+
+Given observations:
+```
+
+x1, x2, ..., xn
+
+```
+
+Sample mean:
+```
+
+x̄
+
+```
+
+Sample standard deviation:
+```
+
+s
+
+```
+
+A `(1 − α)` confidence interval for `E[X]` is:
+
+```
+
+x̄ ± t_{α/2, n−1} · (s / √n)
+
+```
+
+where `t` is the Student’s t quantile.
+
+---
+
+### Interpretation
+
+- Interval width reflects uncertainty
+- Increasing `n` reduces interval width
+- Valid only if observations are approximately independent
+
+---
+
+### Program `estimate`
+
+- Reads simulation output
+- Computes confidence intervals
+- Automates statistical reporting
+
+---
+
+## 8.2 Monte Carlo Estimation
+
+Monte Carlo estimation applies when:
+- observations are **independent**
+- output corresponds to a **static** random variable
+
+---
+
+### Example
+
+Estimating:
+```
+
+θ = E[g(X)]
+
+```
+
+Estimator:
+```
+
+θ̂ = (1/n) Σ g(X_i)
+
+```
+
+By the Central Limit Theorem:
+```
+
+θ̂ ≈ Normal(θ, σ²/n)
+
+```
+
+---
+
+### Accuracy vs Cost
+
+- Variance determines required sample size
+- High variance ⇒ many samples needed
+- Variance reduction techniques are valuable
+
+---
+
+## 8.3 Finite-Horizon and Infinite-Horizon Statistics
+
+Simulation output differs depending on the **time horizon**.
+
+---
+
+### Finite-Horizon Statistics
+
+Used when:
+- system has a natural termination
+- interest is in transient behavior
+
+Examples:
+- total waiting time over a day
+- number of failures in a shift
+
+Observations are typically independent across replications.
+
+---
+
+### Infinite-Horizon (Steady-State) Statistics
+
+Used when:
+- system runs indefinitely
+- interest is in long-run averages
+
+Examples:
+- average queue length
+- average response time
+
+Steady-state output is usually **correlated**.
+
+---
+
+### Initialization Bias
+
+Initial conditions distort early observations.
+
+Common remedies:
+- discard initial observations (warm-up)
+- start from realistic initial state
+
+---
+
+## 8.4 Batch Means
+
+Batch means is a primary technique for **steady-state output analysis**.
+
+---
+
+### Idea
+
+1. Run one long simulation
+2. Divide output into `k` contiguous batches
+3. Compute batch averages
+4. Treat batch means as approximately independent
+
+---
+
+### Procedure
+
+Let `Y(t)` be a time-dependent output.
+
+Divide simulation time into batches of equal length `B`.
+
+Batch mean `j`:
+```
+
+Ȳ_j = (1/B) ∫ Y(t) dt  over batch j
+
+```
+
+---
+
+### Confidence Interval Using Batch Means
+
+Treat `Ȳ_1, ..., Ȳ_k` as i.i.d.:
+
+```
+
+Ȳ ± t_{α/2, k−1} · (s_b / √k)
+
+```
+
+where `s_b` is the standard deviation of batch means.
+
+---
+
+### Trade-offs
+
+- Larger batches → less correlation
+- Fewer batches → less statistical power
+- Balance is required
+
+---
+
+## 8.5 Steady-State Single-Server Statistics *(Optional)*
+
+For certain models, analytical steady-state results are known.
+
+Simulation results can be:
+- compared to theory
+- used for validation
+
+Examples:
+- M/M/1 queue
+- utilization
+- mean delay
+
+---
+
+## Verification vs Validation in Output Analysis
+
+- **Verification**: statistics computed correctly?
+- **Validation**: statistics represent the real system?
+
+Output analysis is central to both.
+
+---
+
+## Summary
+
+- Simulation output is random and often correlated
+- Confidence intervals quantify uncertainty
+- Finite-horizon and steady-state require different methods
+- Batch means enables steady-state inference
+- Poor output analysis invalidates simulation conclusions
+
+---
+
+**End of Chapter 8**
