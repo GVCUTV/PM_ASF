@@ -155,3 +155,31 @@
   - `etl/output/logs/summarize_and_plot.log`
 - **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
 - **Limitations:** Assumes columns like `fields.issuetype.name` and `fields.status.name` exist; missing columns will raise errors at runtime.
+
+---
+
+## ETL Script: `etl/5_estimate_parameters.py`
+
+**What it does**
+- Computes global arrival/throughput metrics and resolution-time summaries from the merged ticket dataset.
+- Exports per-phase duration tables and summary statistics for development, review, and testing.
+- Builds a daily backlog time series (open tickets) and saves a PNG plot.
+
+**How it is implemented**
+- Loads `etl/output/csv/tickets_prs_merged.csv` and normalizes timestamps for creation/resolution.
+- Estimates inter-arrival times (days) from sorted creation timestamps and derives an arrival rate as `1 / mean_interarrival`.
+- Computes global resolution-time mean/median (in days) and a mean monthly throughput based on resolution dates.
+- Summarizes phase duration columns (`dev_duration_days`, `review_duration_days`, `test_duration_days`) with counts, missing-share, mean, median, std, quartiles, and min/max.
+- Calculates backlog using cumulative daily created vs resolved counts and plots the series.
+
+**How it must be used**
+- **Command:** `python etl/5_estimate_parameters.py`
+- **Inputs:** `etl/output/csv/tickets_prs_merged.csv`
+- **Outputs:**
+  - `etl/output/csv/parameter_estimates.csv`
+  - `etl/output/csv/phase_durations_wide.csv`
+  - `etl/output/csv/phase_summary_stats.csv`
+  - `etl/output/png/backlog_over_time.png`
+  - `etl/output/logs/estimate_parameters.log`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+- **Limitations:** If required timestamp or phase columns are missing, the script logs warnings and skips or leaves related metrics as `NaN`.
