@@ -236,3 +236,24 @@
   - `etl/output/png/confronto_fit_testing.png`
   - `etl/output/logs/fit_distributions.log`
 - **Limitations:** Requires at least 10 valid samples per series; if KDE or fits fail, it skips output for that series and logs a warning.
+
+---
+
+## ETL Script: `etl/8_export_fit_summary.py`
+
+**What it does**
+- Converts per-stage distribution fit statistics into a compact `fit_summary.csv` for simulation inputs.
+- Selects the best fit per stage using the available error metric (MSE/MAE) and optional plausibility filtering.
+
+**How it is implemented**
+- Loads `distribution_fit_stats_<stage>.csv` for each requested stage, requiring `Distribuzione` and `Parametri` columns.
+- Parses the `Parametri` string into floats and maps Italian distribution labels to SciPy names.
+- Chooses the best fit by sorting on the first available metric (MSE/MAE) with AIC/BIC tie-breakers.
+- Writes `fit_summary.csv` with normalized columns (`stage`, `dist`, `s`, `c`, `loc`, `scale`, `mean`, `std`, `mse`).
+
+**How it must be used**
+- **Command:** `python etl/8_export_fit_summary.py --stages development review testing`
+- **Inputs:** `etl/output/csv/distribution_fit_stats_<stage>.csv` for each stage (or overrides via `--stage-csv`).
+- **Outputs:** `etl/output/csv/fit_summary.csv`, `etl/output/logs/export_fit_summary.log`.
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`; use `--base-dir` and `--out-csv` to override locations.
+- **Limitations:** The script fails fast if input CSVs are missing required columns or if no metric column is found.
