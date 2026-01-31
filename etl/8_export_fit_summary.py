@@ -71,15 +71,19 @@ def normalize_stage(stage):
     raise ValueError(f"Stage non riconosciuto: {stage}")
 
 
-def choose_winner(stats_df, plausible_only):
+def choose_winner(stats_df, metric, plausible_only):
     if plausible_only and "Plausible" in stats_df.columns:
         plausible = stats_df[stats_df["Plausible"].astype(bool)]
         if plausible.empty:
             raise ValueError("Nessun fit plausibile disponibile.")
         stats_df = plausible
-    metric = next((m for m in DEFAULT_METRICS if m in stats_df.columns), None)
-    if metric is None:
+    if metric not in stats_df.columns:
         raise ValueError("Colonna metrica assente per la selezione del fit.")
+    stats_df = stats_df.copy()
+    stats_df[metric] = pd.to_numeric(stats_df[metric], errors="coerce")
+    stats_df = stats_df.dropna(subset=[metric])
+    if stats_df.empty:
+        raise ValueError("Valori metrici non validi per la selezione del fit.")
     sort_cols = [metric]
     for extra in ("AIC", "BIC"):
         if extra in stats_df.columns:
@@ -196,7 +200,7 @@ def main():
             )
 
         try:
-            winner = choose_winner(stats_df, args.plausible_only)
+            winner = choose_winner(stats_df, metric, args.plausible_only)
         except ValueError as exc:
             raise SystemExit(str(exc)) from exc
 
