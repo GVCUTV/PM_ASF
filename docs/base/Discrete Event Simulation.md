@@ -2074,3 +2074,193 @@ study.
 ---
 
 **End of Chapter 9**
+
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 10 — Projects
+-->
+
+# Chapter 10 — Projects
+
+This chapter presents a collection of **comprehensive simulation projects** designed to
+integrate concepts from the entire book. The projects emphasize **model building,
+verification, validation, experimentation, and analysis**.
+
+Each project is specified at the **conceptual, specification, and computational** levels
+and is intended to be extended and explored experimentally.
+
+---
+
+## Sections
+- 10.1 Empirical Tests of Randomness
+- 10.2 Birth–Death Processes
+- 10.3 Finite-State Markov Chains
+- 10.4 A Network of Single-Server Service Nodes
+
+---
+
+## 10.1 Empirical Tests of Randomness
+
+This project focuses on evaluating the quality of **pseudo-random number generators**.
+
+---
+
+### Objectives
+
+- Understand limitations of PRNGs
+- Apply statistical tests of randomness
+- Detect non-random patterns
+
+---
+
+### Typical Tests
+
+- Frequency (uniformity) tests
+- Runs tests
+- Serial correlation tests
+
+---
+
+### Key Insight
+
+Passing individual tests does not guarantee true randomness.  
+Randomness testing is **empirical and probabilistic**, not absolute.
+
+---
+
+## 10.2 Birth–Death Processes
+
+This project studies systems that evolve according to **birth–death dynamics**.
+
+---
+
+### Characteristics
+
+- State space: nonnegative integers
+- Births increase state by 1
+- Deaths decrease state by 1
+
+---
+
+### Applications
+
+- queue length evolution
+- population models
+- repairable systems
+
+---
+
+### Objectives
+
+- Compare simulation results to analytical steady-state solutions
+- Investigate transient vs steady-state behavior
+- Validate simulation correctness
+
+---
+
+## 10.3 Finite-State Markov Chains
+
+This project models systems with a **finite number of states** and probabilistic transitions.
+
+---
+
+### Model Definition
+
+- Finite state space
+- Transition probability matrix
+- Markov property (memoryless)
+
+---
+
+### Simulation Goals
+
+- Estimate steady-state probabilities
+- Measure convergence behavior
+- Compare simulation to theoretical results
+
+---
+
+### Applications
+
+- reliability modeling
+- performance states
+- decision processes
+
+---
+
+## 10.4 A Network of Single-Server Service Nodes
+
+This project integrates multiple queues into a **networked system**.
+
+---
+
+### Network Features
+
+- multiple service nodes
+- routing probabilities
+- shared or independent streams
+
+---
+
+### Objectives
+
+- Study congestion propagation
+- Measure end-to-end delays
+- Analyze bottlenecks
+
+---
+
+### Extensions
+
+- non-FIFO disciplines
+- finite capacities
+- priority routing
+
+---
+
+## Project Methodology
+
+Each project emphasizes:
+
+1. Conceptual modeling
+2. Specification of input processes
+3. Computational implementation
+4. Verification
+5. Validation
+6. Experimental analysis
+7. Documentation of insight
+
+---
+
+## Educational Purpose
+
+These projects are designed to:
+
+- reinforce theory through implementation
+- encourage experimentation
+- develop simulation intuition
+- expose modeling pitfalls
+
+They are suitable as:
+- capstone assignments
+- exam projects
+- team-based coursework
+
+---
+
+## Summary
+
+- Projects integrate all major simulation concepts
+- Emphasis on correctness and insight
+- Comparison with analytical results is encouraged
+- Documentation is part of the deliverable
+- Simulation is both a modeling and learning tool
+
+---
+
+**End of Chapter 10**
