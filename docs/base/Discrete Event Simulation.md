@@ -1357,3 +1357,262 @@ Applications:
 ---
 
 **End of Chapter 6**
+
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 7 — Continuous Random Variables
+-->
+
+# Chapter 7 — Continuous Random Variables
+
+Continuous random variables are essential for modeling **interarrival times, service times,
+repair times**, and other quantities that vary over a continuum.
+
+This chapter introduces continuous distributions and practical methods for **generating
+continuous random variables from U(0,1)**.
+
+---
+
+## Sections
+- 7.1 Continuous Random Variables
+- 7.2 Generating Continuous Random Variables
+- 7.3 Continuous Random Variable Applications (`ssq4`)
+- 7.4 Continuous Random Variable Models *(optional)*
+- 7.5 Nonstationary Poisson Processes *(optional)*
+- 7.6 Acceptance–Rejection *(optional)*
+
+---
+
+## 7.1 Continuous Random Variables
+
+A **continuous random variable** takes values on a continuous domain.
+
+---
+
+### Probability Density Function (PDF)
+
+For a continuous random variable `X`:
+
+```
+
+f(x) ≥ 0
+∫ f(x) dx = 1
+
+```
+
+Probabilities are computed as:
+
+```
+
+P(a ≤ X ≤ b) = ∫_a^b f(x) dx
+
+```
+
+---
+
+### Cumulative Distribution Function (CDF)
+
+```
+
+F(x) = P(X ≤ x) = ∫_{−∞}^x f(t) dt
+
+```
+
+Properties:
+- non-decreasing
+- continuous
+- `F(−∞)=0`, `F(∞)=1`
+
+---
+
+### Expected Value
+
+```
+
+E[X] = ∫ x f(x) dx
+
+```
+
+---
+
+### Variance
+
+```
+
+Var(X) = E[(X − E[X])²]
+
+```
+
+---
+
+## 7.2 Generating Continuous Random Variables
+
+Simulation requires transforming `U ~ U(0,1)` into a continuous random variable.
+
+---
+
+### Inverse Transform Method
+
+If `F(x)` is invertible:
+
+```
+
+X = F⁻¹(U)
+
+```
+
+This method:
+- is exact
+- is simple to implement
+- requires closed-form inverse CDF
+
+---
+
+### Example — Exponential Distribution
+
+PDF:
+```
+
+f(x) = λ e^{−λx}, x ≥ 0
+
+```
+
+CDF:
+```
+
+F(x) = 1 − e^{−λx}
+
+```
+
+Inverse:
+```
+
+X = −(1/λ) ln(1 − U)
+
+```
+
+---
+
+### Numerical Considerations
+
+- `1 − U` is often replaced by `U`
+- logarithms require care for very small values
+
+---
+
+## 7.3 Continuous Random Variable Applications
+
+### Single-Server Queue (`ssq4`)
+
+Service and interarrival times are modeled using continuous distributions.
+
+Typical choices:
+- exponential (memoryless)
+- deterministic
+- custom empirical models
+
+---
+
+### Service-Time Modeling
+
+Choice of distribution affects:
+- waiting times
+- queue lengths
+- system variability
+
+Mean alone is insufficient; **variance matters**.
+
+---
+
+## 7.4 Continuous Random Variable Models *(Optional)*
+
+Common distributions:
+- Uniform
+- Exponential
+- Erlang
+- Hyperexponential
+- Weibull
+
+Each distribution captures different variability characteristics.
+
+---
+
+### Variability Comparison
+
+Distributions with equal means may have vastly different variances,
+leading to different system behavior.
+
+---
+
+## 7.5 Nonstationary Poisson Processes *(Optional)*
+
+Arrival rates may vary over time:
+
+```
+
+λ = λ(t)
+
+```
+
+Such processes are **nonstationary**.
+
+Applications:
+- time-of-day effects
+- seasonal demand
+- workload bursts
+
+---
+
+### Thinning Method
+
+Used to generate nonstationary Poisson arrivals by:
+- bounding with a maximum rate
+- probabilistic rejection
+
+---
+
+## 7.6 Acceptance–Rejection *(Optional)*
+
+Used when inverse CDF is unavailable.
+
+---
+
+### Algorithm — Acceptance–Rejection
+
+1. Generate candidate `Y` from easy distribution `g(y)`
+2. Generate `U ~ U(0,1)`
+3. Accept `Y` if:
+```
+
+U ≤ f(Y) / (c g(Y))
+
+```
+
+where `c` bounds `f(x)/g(x)`.
+
+---
+
+### Trade-offs
+
+- Flexible
+- Potentially inefficient
+- Requires bounding function
+
+---
+
+## Summary
+
+- Continuous random variables model time and quantity
+- PDF and CDF define distributions
+- Inverse transform is preferred when available
+- Variability strongly affects performance
+- Advanced techniques support complex processes
+
+---
+
+**End of Chapter 7**
