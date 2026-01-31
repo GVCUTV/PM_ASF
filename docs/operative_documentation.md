@@ -206,3 +206,33 @@
   - `etl/output/logs/diagnose_tickets.log`
 - **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
 - **Limitations:** The script prints per-ticket diagnostics to stdout, which can be verbose on large datasets; histogram generation is skipped when no valid resolution-time data is available.
+
+---
+
+## ETL Script: `etl/7_fit_distributions.py`
+
+**What it does**
+- Fit candidate distributions (lognormal, Weibull, exponential, normal) to resolution time and to per-phase durations (development/review/testing).
+- Produces per-stage fit statistics CSVs, comparison plots against KDE, and a compact `fit_summary.csv` for simulation configuration.
+
+**How it is implemented**
+- Loads the merged dataset (`etl/output/csv/tickets_prs_merged.csv`) and computes `resolution_time_days` if it is missing by subtracting creation and resolution timestamps.
+- Filters duration samples to non-negative finite values capped at 10 years (`MAX_DAYS`) and requires a minimum sample size before fitting.
+- Uses KDE as a reference density and fits each candidate distribution with SciPy; for each fit it computes MSE vs KDE, KS p-value, AIC/BIC, mean/std, and a plausibility flag.
+- Writes per-stage statistics to `distribution_fit_stats_<stage>.csv`, saves comparison plots `confronto_fit_<stage>.png`, and selects the best fit (by minimum MSE, with plausibility preference) to populate `fit_summary.csv` with SciPy-compatible parameter fields.
+
+**How it must be used**
+- **Command:** `python etl/7_fit_distributions.py`
+- **Inputs:** `etl/output/csv/tickets_prs_merged.csv` (from `etl/3_clean_and_merge.py`).
+- **Outputs:**
+  - `etl/output/csv/distribution_fit_stats.csv` (resolution-time fits)
+  - `etl/output/csv/distribution_fit_stats_development.csv`
+  - `etl/output/csv/distribution_fit_stats_review.csv`
+  - `etl/output/csv/distribution_fit_stats_testing.csv`
+  - `etl/output/csv/fit_summary.csv`
+  - `etl/output/png/confronto_fit_resolution_time.png`
+  - `etl/output/png/confronto_fit_development.png`
+  - `etl/output/png/confronto_fit_review.png`
+  - `etl/output/png/confronto_fit_testing.png`
+  - `etl/output/logs/fit_distributions.log`
+- **Limitations:** Requires at least 10 valid samples per series; if KDE or fits fail, it skips output for that series and logs a warning.
