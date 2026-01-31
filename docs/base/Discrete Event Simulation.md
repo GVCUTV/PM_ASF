@@ -478,3 +478,240 @@ This motivates:
 ---
 
 **End of Chapter 2**
+
+
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 3 — Discrete-Event Simulation
+-->
+
+# Chapter 3 — Discrete-Event Simulation
+
+This chapter introduces **stochastic discrete-event simulation models**, extending the
+trace-driven models of Chapter 1 by incorporating **random number generation**.
+
+The focus is on:
+- event-based time advance
+- stochastic input modeling
+- reusable simulation structure
+
+---
+
+## Sections
+- 3.1 Discrete-Event Simulation (`ssq2`, `sis2`)
+- 3.2 Multi-Stream Lehmer RNG (`rngs`)
+- 3.3 Discrete-Event Simulation Models (`ssms`)
+
+---
+
+## 3.1 Discrete-Event Simulation
+
+A **discrete-event simulation** advances time by jumping directly to the next scheduled
+event.
+
+System state changes occur only at **event times**.
+
+Typical events:
+- job arrival
+- service completion
+- inventory replenishment
+
+---
+
+### Simulation Clock
+
+A simulation maintains a **simulation clock** `t`, representing the current simulated time.
+
+Rules:
+- `t` never decreases
+- `t` advances to the time of the next event
+
+---
+
+### Event Scheduling
+
+Each event is associated with:
+- an **event type**
+- an **event time**
+
+Future events are stored in an **event list**, ordered by event time.
+
+---
+
+### Single-Server Queue (`ssq2`)
+
+This model extends the FIFO single-server queue by:
+- generating interarrival times randomly
+- generating service times randomly
+
+Interarrival times and service times are sampled from specified distributions.
+
+---
+
+#### Arrival Event Logic
+
+1. Advance clock to arrival time
+2. Schedule next arrival
+3. If server idle:
+   - start service
+   - schedule departure
+4. Else:
+   - enqueue job
+
+---
+
+#### Departure Event Logic
+
+1. Advance clock to departure time
+2. If queue empty:
+   - server becomes idle
+3. Else:
+   - dequeue next job
+   - schedule its departure
+
+---
+
+### Inventory System (`sis2`)
+
+The inventory level evolves due to:
+- demand events
+- replenishment events
+
+State variables:
+- inventory level
+- outstanding orders
+
+Policies determine when orders are placed and how much is ordered.
+
+---
+
+## 3.2 Multi-Stream Lehmer Random Number Generation
+
+Using a **single random number stream** can introduce unwanted correlations.
+
+To avoid this, simulations use **multiple independent streams**.
+
+---
+
+### Stream-Based Generators
+
+Each stream:
+- has its own seed
+- evolves independently
+
+Typical usage:
+- one stream for arrivals
+- one stream for services
+- one stream for routing or decisions
+
+---
+
+### Library `rngs`
+
+Provides:
+- multiple independent Lehmer generators
+- stream selection
+- reproducibility
+
+Benefits:
+- modular simulation design
+- easier debugging
+- reduced correlation risk
+
+---
+
+## 3.3 Discrete-Event Simulation Models
+
+This section generalizes discrete-event simulation into a **modeling framework**.
+
+---
+
+### Model Components
+
+A discrete-event simulation model consists of:
+
+- **State variables**
+- **Event types**
+- **Event list**
+- **Statistical counters**
+- **Initialization logic**
+- **Termination conditions**
+
+---
+
+### Initialization
+
+Typical steps:
+- set simulation clock to zero
+- initialize state variables
+- schedule initial events
+
+---
+
+### Main Simulation Loop
+
+```
+
+while (termination condition not met) {
+remove next event from event list
+advance simulation clock
+execute event logic
+update statistics
+}
+
+```
+
+---
+
+### Termination Conditions
+
+Common termination rules:
+- fixed number of events
+- fixed simulated time horizon
+- convergence-based stopping
+
+---
+
+### Statistics Collection
+
+Statistics may be:
+- **job-based** (e.g., delay per job)
+- **time-based** (e.g., average queue length)
+
+Statistics must be updated:
+- at event times
+- when state variables change
+
+---
+
+## Verification vs Validation
+
+- **Verification**: is the model implemented correctly?
+- **Validation**: does the model represent the real system?
+
+Both are essential.
+
+---
+
+## Reproducibility
+
+A defining feature of discrete-event simulation:
+- identical seeds → identical results
+- experiments can be repeated exactly
+
+---
+
+## Summary
+
+- Discrete-event simulation advances time by events
+- Event lists drive execution
+- Randomness is introduced via RNG streams
+- Models are modular and extensible
+- Correct statistics collection is critical
+
+---
+
+**End of Chapter 3**
