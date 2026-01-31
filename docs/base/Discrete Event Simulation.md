@@ -269,3 +269,212 @@ Inventory models provide the foundation for later chapters.
 ---
 
 **End of Chapter 1**
+
+
+<!--
+Discrete-Event Simulation: A First Course
+Lawrence Leemis, Steve Park
+Chapter 2 — Random Number Generation
+-->
+
+# Chapter 2 — Random Number Generation
+
+Random number generation is a fundamental component of **stochastic simulation**.  
+In discrete-event simulation, randomness is required to model arrivals, services, failures, and other stochastic phenomena.
+
+This chapter focuses on **pseudo-random number generators (PRNGs)** and their use in Monte Carlo and discrete-event simulation.
+
+---
+
+## Sections
+- 2.1 Lehmer Random Number Generation: Introduction  
+- 2.2 Lehmer Random Number Generation: Implementation (`rng`)  
+- 2.3 Monte Carlo Simulation (`galileo`, `buffon`)  
+- 2.4 Monte Carlo Simulation Examples *(optional)*  
+- 2.5 Finite-State Sequences *(optional)*  
+
+---
+
+## 2.1 Lehmer Random Number Generation: Introduction
+
+Simulation requires sequences of numbers that **behave like independent samples from U(0,1)**.
+
+True randomness is rarely available; instead, simulation relies on **deterministic algorithms** that generate sequences with good statistical properties.
+
+Such generators are called **pseudo-random number generators**.
+
+---
+
+### Linear Congruential Generators (LCG)
+
+A commonly used class of PRNGs is defined by the recurrence:
+
+```
+
+Z_i = (a Z_{i−1} + c) mod m
+U_i = Z_i / m
+
+```
+
+where:
+- `m` is the modulus
+- `a` is the multiplier
+- `c` is the increment
+- `Z_0` is the seed
+
+If `c = 0`, the generator is called a **Lehmer generator**.
+
+---
+
+### Lehmer Generator
+
+```
+
+Z_i = (a Z_{i−1}) mod m
+U_i = Z_i / m
+
+````
+
+Properties:
+- Simple and fast
+- Fully deterministic
+- Period at most `m − 1`
+
+Good parameter choices are critical.
+
+---
+
+### Period
+
+The **period** is the length of the sequence before it repeats.
+
+For a Lehmer generator, the maximum period is `m − 1`.
+
+Achieving full period requires:
+- `m` prime
+- `a` a primitive root modulo `m`
+
+---
+
+## 2.2 Lehmer Random Number Generation: Implementation
+
+This section introduces a reusable **random number library**.
+
+### Library `rng`
+
+The library encapsulates:
+- generator state
+- seed initialization
+- uniform random number generation
+
+#### Typical Interface
+
+```c
+void rng_init(long seed);
+double rng_rand();
+````
+
+The generator returns values in `(0,1)`.
+
+---
+
+### Seeding
+
+The **seed** determines the entire sequence.
+
+Important properties:
+
+* Same seed → same sequence (reproducibility)
+* Different seeds → different sequences
+
+Reproducibility is a **key advantage of simulation**.
+
+---
+
+### Numerical Issues
+
+* Integer overflow must be avoided
+* Modulus and multiplier must be chosen carefully
+* Floating-point conversion should preserve uniformity
+
+---
+
+## 2.3 Monte Carlo Simulation
+
+Monte Carlo simulation uses random sampling to estimate quantities of interest.
+
+It applies primarily to **static stochastic systems**.
+
+---
+
+### Example: Estimating π (`buffon`)
+
+Random points are generated uniformly in a square.
+
+π is estimated by:
+
+```
+π ≈ 4 × (points inside circle) / (total points)
+```
+
+Accuracy improves as the number of samples increases.
+
+---
+
+### Example: Galileo’s Experiment (`galileo`)
+
+Simulation reproduces probabilistic experiments described historically.
+
+Monte Carlo simulation is often used to:
+
+* validate intuition
+* test analytical results
+* explore probabilistic behavior
+
+---
+
+## 2.4 Monte Carlo Simulation Examples *(Optional)*
+
+Examples include:
+
+* dice games
+* hat-checking problem
+* gambling simulations
+
+These examples emphasize:
+
+* law of large numbers
+* sampling variability
+* convergence behavior
+
+---
+
+## 2.5 Finite-State Sequences *(Optional)*
+
+PRNGs produce **finite-state deterministic sequences**.
+
+Consequences:
+
+* eventual repetition
+* dependence structure
+* non-random artifacts if poorly designed
+
+This motivates:
+
+* statistical testing
+* use of multiple streams
+* careful generator selection
+
+---
+
+## Summary
+
+* Simulation requires high-quality uniform random numbers
+* Lehmer generators provide a simple, efficient solution
+* Reproducibility is essential
+* Monte Carlo simulation relies entirely on PRNG quality
+* Poor generators can invalidate simulation results
+
+---
+
+**End of Chapter 2**
