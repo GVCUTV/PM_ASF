@@ -76,3 +76,82 @@
   - Token pool uses `GITHUB_TOKENS` or `etl/env/github_tokens.env`.
   - Incremental mode reuses rows based on `updated_at` (if a prior CSV exists).
 - **Limitations:** Running without tokens falls back to anonymous access with low rate limits; large repos may take a long time or yield partial data.
+
+---
+
+## ETL Overview (Raw CSVs to Merged Dataset and Summaries)
+
+**What it does**
+- The downstream ETL steps transform raw Jira/GitHub CSVs into a merged, ticket-centric dataset with derived phase timestamps/durations, then produce high-level summary outputs for reporting.
+- The key contract produced by this stage is `etl/output/csv/tickets_prs_merged.csv`, which is consumed by analysis scripts that estimate parameters, fit distributions, and diagnose data quality.
+
+**How it is implemented**
+- The workflow is not orchestrated by a single runner; scripts are executed manually in order after the ingestion layer.
+- `etl/3_clean_and_merge.py` loads raw Jira/PR exports, cleans and normalizes them, merges on Jira key, and derives development/review/testing timestamps and duration columns.
+- `etl/4_summarize_and_plot.py` reads the merged dataset to generate summary counts and a ticket-type pie chart for quick reporting.
+
+**How to use it**
+1. Ensure the raw CSVs exist (`etl/output/csv/jira_issues_raw.csv`, `etl/output/csv/github_prs_raw.csv`).
+2. Run `etl/3_clean_and_merge.py` to generate the cleaned and merged outputs.
+3. Run `etl/4_summarize_and_plot.py` to produce summary tables and a pie chart.
+4. Use the merged CSV as input to downstream analysis scripts (parameter estimation, distribution fitting, enrichment).
+
+**Outputs and contracts**
+- `etl/output/csv/jira_issues_clean.csv` and `etl/output/csv/github_prs_clean.csv` are intermediate cleaned datasets.
+- `etl/output/csv/tickets_prs_merged.csv` is the canonical merged dataset used by later ETL steps.
+- `etl/output/csv/statistiche_riassuntive.csv` and `etl/output/png/distribuzione_ticket_tipo.png` are summary artifacts intended for reporting.
+
+---
+
+## ETL Script: `etl/3_clean_and_merge.py`
+
+**What it does**
+- Cleans raw Jira issues and GitHub PR exports, merges them on Jira key, and derives phase timestamps/durations for development, review, and testing.
+- Produces the canonical merged dataset (`tickets_prs_merged.csv`) consumed by downstream ETL analysis and reporting scripts.
+
+**How it is implemented**
+- Loads `jira_issues_raw.csv` and `github_prs_raw.csv` from `etl/output/csv/`.
+- Cleans Jira issues by de-duplicating on Jira key, filtering out specific resolution values, and normalizing timestamps.
+- Cleans PR data by extracting Jira keys from title/body using a regex and normalizing PR timestamps; it uses `merged_at` when present and falls back to `closed_at` for review end.
+- Merges the datasets with a left join on Jira key, then aggregates PR timestamps to compute phase start/end points and duration columns (`dev_duration_days`, `review_duration_days`, `test_duration_days`).
+- Writes cleaned CSVs for both Jira and PRs plus the merged dataset and logs the run.
+
+**How it must be used**
+- **Command:** `python etl/3_clean_and_merge.py`
+- **Inputs:**
+  - `etl/output/csv/jira_issues_raw.csv`
+  - `etl/output/csv/github_prs_raw.csv`
+- **Outputs:**
+  - `etl/output/csv/jira_issues_clean.csv`
+  - `etl/output/csv/github_prs_clean.csv`
+  - `etl/output/csv/tickets_prs_merged.csv`
+  - `etl/output/logs/clean_and_merge.log`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`; Jira key extraction is hard-coded to `BOOKKEEPER-<num>` regex.
+- **Limitations:**
+  - If required columns are missing, the script logs warnings and leaves derived fields as `NaN`.
+  - Missing or negative phase deltas are set to `NaN` to avoid invalid durations.
+  - Resolution filtering can remove tickets and affect totals; it is not currently configurable.
+
+---
+
+## ETL Script: `etl/4_summarize_and_plot.py`
+
+**What it does**
+- Produces summary counts by issue type and generates a ticket-type pie chart from the merged dataset.
+- Exports the summary table to CSV for reporting.
+
+**How it is implemented**
+- Loads `etl/output/csv/tickets_prs_merged.csv` and groups rows by `fields.issuetype.name` to compute counts.
+- Identifies basic ticket status categories (reopened, in-progress, closed without PR) using columns such as `fields.status.name` and PR linkage.
+- Generates a pie chart with a legend (to avoid label overlap) and saves it as a PNG.
+- Writes the summary counts to `statistiche_riassuntive.csv` and logs the run.
+
+**How it must be used**
+- **Command:** `python etl/4_summarize_and_plot.py`
+- **Inputs:** `etl/output/csv/tickets_prs_merged.csv`
+- **Outputs:**
+  - `etl/output/png/distribuzione_ticket_tipo.png`
+  - `etl/output/csv/statistiche_riassuntive.csv`
+  - `etl/output/logs/summarize_and_plot.log`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+- **Limitations:** Assumes columns like `fields.issuetype.name` and `fields.status.name` exist; missing columns will raise errors at runtime.
