@@ -1,0 +1,23 @@
+{
+  "DEV": {
+    "distribution": "lognormal",
+    "parameters": {
+      "mu": 2.596197855368563,
+      "sigma": 4.826718427500432
+    }
+  },
+  "REVIEW": {
+    "distribution": "weibull",
+    "parameters": {
+      "scale": 404.58150021852566,
+      "shape": 0.5044680674568907
+    }
+  },
+  "TESTING": {
+    "distribution": "lognormal",
+    "parameters": {
+      "mu": -2.73619168979848,
+      "sigma": 4.617217980322845
+    }
+  }
+}

@@ -209,6 +209,51 @@
 
 ---
 
+## State-Parameter Extraction: `etl/state_parameters.py`
+
+**What it does**
+- Builds semi-Markov state parameters for the developer model over `OFF/DEV/REV/TEST` by deriving per-developer event timelines from Jira/PR data, estimating transition probabilities, and computing empirical stint PMFs.
+- Emits intermediate datasets required to audit the extraction path from raw Jira/PR exports through phase boundaries and developer event sequences.
+- Reads the best-fit service-time distributions for DEV/REV/TEST from the Phase 3 distribution summary and writes them to a machine-readable parameter file.
+
+**How it is implemented**
+- Loads `etl/output/csv/phase_durations.csv` to obtain per-ticket phase boundaries (`dev_start_ts`, `review_start_ts`, `review_end_ts`, `testing_end_ts`) and skips rows with missing timestamps, recording the reasons in `skipped_phase_rows.csv`.
+- Loads `etl/output/csv/github_prs_raw.csv`, extracts Jira keys from PR title/body using the `BOOKKEEPER-<num>` regex, and maps PR assignees to Jira keys for developer attribution.
+- Constructs per-developer event stints for DEV/REV/TEST and inserts OFF gaps when there is a positive time gap between consecutive stints; gaps are rounded to a fixed precision (days).
+- Computes transition counts between all states and converts them to probabilities using Laplace smoothing (α = 1). Stint PMFs are computed from rounded durations and normalized per state.
+- Reads `etl/output/csv/distribution_summary.csv` to capture each phase’s `best_fit` distribution and serialized `parameters`, then writes the values into `service_params.json` without assuming a distribution family.
+
+**How it must be used**
+1. Ensure Phase 3 ETL outputs exist:
+   - `etl/output/csv/phase_durations.csv`
+   - `etl/output/csv/distribution_summary.csv`
+2. Run the script from the repository root:
+   - `python etl/state_parameters.py`
+3. Verify state-parameter outputs under `data/state_parameters/` and review any skipped rows.
+
+**Outputs and contracts**
+- Required state-parameter outputs:
+  - `data/state_parameters/matrix_P.csv`
+  - `data/state_parameters/stint_PMF_OFF.csv`
+  - `data/state_parameters/stint_PMF_DEV.csv`
+  - `data/state_parameters/stint_PMF_REV.csv`
+  - `data/state_parameters/stint_PMF_TEST.csv`
+  - `data/state_parameters/service_params.json`
+- Intermediate datasets:
+  - `data/state_parameters/jira_pr_key_map.csv`
+  - `data/state_parameters/developer_ticket_map.csv`
+  - `data/state_parameters/developer_events.csv`
+  - `data/state_parameters/transition_counts.csv`
+  - `data/state_parameters/stint_counts_<STATE>.csv`
+  - `data/state_parameters/skipped_phase_rows.csv`
+  - `data/state_parameters/skipped_event_rows.csv`
+- Limitations:
+  - Events with missing or invalid timestamps are skipped and reported.
+  - Negative durations or overlaps are discarded and logged in skipped rows.
+  - OFF stints are only inferred from observed gaps between sequential events.
+
+---
+
 ## ETL Script: `etl/3_phase_duration_distribution_etl.py` — Distribution Parameters Output
 
 **What it does**
@@ -341,32 +386,3 @@
 - **Limitations:** Jira transition history is not consumed by this script; when transitions are unavailable the markdown summary prompts for user confirmation of fallback boundary inference.
 
 ---
-
-## ETL Script: `etl/state_parameters.py`
-
-**What it does**
-- Builds per-developer state transitions and duration PMFs for the workflow states **OFF**, **DEV**, **REV**, and **TEST**.
-- Reads GitHub PR assignees, joins them to Jira phase timestamps, expands per-developer events, and outputs a transition matrix plus per-state PMFs for simulation parameterization.
-
-**How it is implemented**
-- Loads `etl/output/csv/github_prs_raw.csv` and extracts assignee identities from the `assignees` column.
-- Loads `etl/output/csv/phase_durations.csv`, parses DEV/REV/TEST timestamps, and drops rows missing any required phase timestamp before event construction.
-- Extracts Jira keys from PR titles/bodies, maps them to phase timestamps, and constructs DEV/REV/TEST events with start/end times derived from the phase columns.
-- For each developer, events are sorted by start time; transitions are built with explicit `OFF → first_state`, gap-driven `state → OFF → next_state`, and final `state → OFF` transitions.
-- Collects positive-duration stints for each state (DEV/REV/TEST from event durations, OFF from idle gaps), rounds durations to 1e-3 days, counts occurrences, and normalizes to a PMF.
-- Emits a normalized transition matrix (rows/cols labeled `OFF,DEV,REV,TEST`) and one PMF CSV per state under `data/state_parameters/`.
-
-**How it must be used**
-- **Command:** `python etl/state_parameters.py`
-- **Inputs:**
-  - `etl/output/csv/github_prs_raw.csv`
-  - `etl/output/csv/phase_durations.csv`
-  - `etl/output/csv/distribution_summary.csv` (presence check only)
-- **Outputs:**
-  - `data/state_parameters/transition_matrix.csv`
-  - `data/state_parameters/pmf_off.csv`
-  - `data/state_parameters/pmf_dev.csv`
-  - `data/state_parameters/pmf_rev.csv`
-  - `data/state_parameters/pmf_test.csv`
-- **Validation:** The script checks that each transition-matrix row and each PMF sums to ~1.0 within a configurable tolerance.
-- **Limitations:** PRs without Jira keys or assignees are skipped; phase rows missing any required timestamps are excluded from event generation.
