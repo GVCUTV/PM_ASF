@@ -396,7 +396,7 @@
 
 **How it is implemented**
 - Loads `etl/output/csv/github_prs_raw.csv` and maps PRs to Jira tickets using the `BOOKKEEPER-<num>` key pattern in PR titles/bodies.
-- Normalizes the created timestamp to UTC and filters PRs into the `[start, end)` window supplied on the CLI.
+- Selects a created timestamp column from the available CSV headers (or `--created-col` if supplied), normalizes it to UTC, and filters PRs into the `[start, end)` window supplied on the CLI (defaults to the full data range when omitted).
 - Derives review feedback signals using a hierarchy:
   - Numeric counters (e.g., `review_rounds`, `requested_changes_count`, `reviews_count`) are converted to numbers and mark rework when the value exceeds 1.
   - Boolean flags (e.g., `review_rework_flag`, `reopened_flag`) are parsed for truthy values when numeric counters are unavailable.
@@ -408,7 +408,7 @@
 - Writes an enriched CSV (`etl/output/csv/feedback_enriched.csv`) when derived columns like `review_rounds`, `review_rework_flag`, or `ci_failed_then_fix` are missing in the raw export.
 
 **How it must be used**
-- **Command:** `python etl/4_feedback_probabilities_etl.py --start <ISO8601> --end <ISO8601> [--created-col created_at]`
+- **Command:** `python etl/4_feedback_probabilities_etl.py [--start <ISO8601>] [--end <ISO8601>] [--created-col <column>]`
 - **Inputs:** `etl/output/csv/github_prs_raw.csv`
 - **Outputs:**
   - `etl/output/csv/feedback_probabilities.csv`
@@ -427,10 +427,10 @@
 - Computes `FEEDBACK_P_DEV` and `FEEDBACK_P_TEST` from PR data inside a deterministic time window, using only available signals in the exports.
 
 **How it is implemented**
-- The ETL script requires `--start` and `--end` timestamps and converts the `created_at` (or `--created-col`) values to UTC-naive timestamps before filtering.
+- The ETL script accepts optional `--start` and `--end` timestamps and converts the detected created timestamp column to UTC-naive timestamps before filtering.
 - It selects the highest-priority available signal set (numeric → boolean → list-based for review; boolean → list-based for test) and calculates the probability as the mean of per-ticket feedback indicators.
 - When raw exports lack required columns, the ETL derives `review_rounds`, `review_rework_flag`, and `ci_failed_then_fix` by parsing review-state and CI-status histories, and logs which columns were used.
 
 **How it must be used**
-- Provide ISO8601 timestamps to define the window and ensure the raw export includes at least one review and one CI signal column.
+- Provide ISO8601 timestamps to define the window when you want to restrict the data slice, and ensure the raw export includes at least one review and one CI signal column.
 - Review the log output to confirm which signals were selected and to validate the computed probabilities.

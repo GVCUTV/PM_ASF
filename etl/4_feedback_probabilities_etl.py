@@ -14,7 +14,7 @@ import csv
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 import sys
@@ -31,6 +31,8 @@ ENRICHED_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "feedback_enriche
 LOG_PATH = Path(PROJECT_ROOT) / "etl" / "output" / "logs" / "feedback_probabilities.log"
 
 JIRA_KEY_REGEX = re.compile(r"BOOKKEEPER-\d+", re.IGNORECASE)
+
+CREATED_COL_CANDIDATES = ("created_at", "created", "fields.created")
 
 REVIEW_NUMERIC_COLUMNS = (
     "review_rounds",
@@ -355,17 +357,17 @@ def enrich_pr_rows(pr_rows: list[dict[str, str]], header: list[str]) -> tuple[li
 def compute_feedback_probabilities(
     pr_rows: list[dict[str, str]],
     created_col: str,
-    start_str: str,
-    end_str: str,
+    start_str: str | None,
+    end_str: str | None,
 ) -> tuple[dict[str, dict[str, float | int]], dict[str, list[str]]]:
-    start = to_utc_naive(parse_timestamp(start_str))
-    end = to_utc_naive(parse_timestamp(end_str))
-    if start is None or end is None:
+    start = to_utc_naive(parse_timestamp(start_str)) if start_str else None
+    end = to_utc_naive(parse_timestamp(end_str)) if end_str else None
+    if (start_str and start is None) or (end_str and end is None):
         raise ValueError("Invalid start/end timestamp. Use ISO8601 timestamps.")
-    if start >= end:
+    if start is not None and end is not None and start >= end:
         raise ValueError("Start timestamp must be before end timestamp.")
 
-    filtered_rows: list[dict[str, str]] = []
+    created_values: list[datetime] = []
     missing_created = 0
     for row in pr_rows:
         created_raw = row.get(created_col)
@@ -373,11 +375,25 @@ def compute_feedback_probabilities(
         if created_ts is None:
             missing_created += 1
             continue
+        created_values.append(created_ts)
+    if not created_values:
+        raise ValueError(f"No valid '{created_col}' timestamps found in input data.")
+
+    start = start if start is not None else min(created_values)
+    if end is None:
+        end = max(created_values) + timedelta(microseconds=1)
+
+    filtered_rows: list[dict[str, str]] = []
+    for row in pr_rows:
+        created_raw = row.get(created_col)
+        created_ts = to_utc_naive(parse_timestamp(created_raw))
+        if created_ts is None:
+            continue
         if start <= created_ts < end:
             filtered_rows.append(row)
     if not filtered_rows:
         raise ValueError(
-            f"No rows found in time window [{start_str}, {end_str}) "
+            f"No rows found in time window [{start.isoformat()}, {end.isoformat()}) "
             f"using created column '{created_col}'."
         )
 
@@ -502,14 +518,28 @@ def write_enriched_csv(pr_rows: list[dict[str, str]], header: list[str], added_c
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Compute review/testing feedback probabilities.")
-    parser.add_argument("--start", required=True, help="Start timestamp (inclusive) in ISO8601.")
-    parser.add_argument("--end", required=True, help="End timestamp (exclusive) in ISO8601.")
+    parser.add_argument("--start", help="Start timestamp (inclusive) in ISO8601.")
+    parser.add_argument("--end", help="End timestamp (exclusive) in ISO8601.")
     parser.add_argument(
         "--created-col",
-        default="created_at",
+        default="",
         help="Column name to use for created timestamp filtering.",
     )
     return parser.parse_args()
+
+
+def select_created_col(header: list[str], created_col: str | None) -> str:
+    if created_col:
+        if created_col not in header:
+            raise ValueError(f"Created column '{created_col}' not found in CSV header.")
+        return created_col
+    for candidate in CREATED_COL_CANDIDATES:
+        if candidate in header:
+            return candidate
+    raise ValueError(
+        "No created timestamp column found in CSV header. "
+        f"Tried: {', '.join(CREATED_COL_CANDIDATES)}."
+    )
 
 
 def main() -> None:
@@ -522,14 +552,15 @@ def main() -> None:
     ensure_required_signal_columns(header)
     enriched_rows, added_columns = enrich_pr_rows(pr_rows, header)
     write_enriched_csv(enriched_rows, header, added_columns)
+    created_col = select_created_col(header, args.created_col.strip() or None)
     metrics, metadata = compute_feedback_probabilities(
         enriched_rows,
-        created_col=args.created_col,
+        created_col=created_col,
         start_str=args.start,
         end_str=args.end,
     )
-    logging.info("Feedback time window: [%s, %s)", args.start, args.end)
-    logging.info("Created timestamp column: %s", args.created_col)
+    logging.info("Feedback time window: [%s, %s)", args.start or "MIN", args.end or "MAX")
+    logging.info("Created timestamp column: %s", created_col)
     logging.info("Review numeric columns used: %s", metadata["review_numeric_columns"])
     logging.info("Review flag columns used: %s", metadata["review_flag_columns"])
     logging.info("Review list columns used: %s", metadata["review_list_columns"])
