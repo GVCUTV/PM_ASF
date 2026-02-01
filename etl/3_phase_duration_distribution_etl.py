@@ -7,6 +7,7 @@ from raw Jira/GitHub exports, aligned to source_of_truth boundary rules.
 """
 
 import csv
+import json
 import math
 import os
 import re
@@ -313,25 +314,38 @@ def compute_summary(samples: list[float]) -> dict[str, float | int | str | None]
     }
 
 
-def select_best_fit(samples: list[float]) -> tuple[str | None, dict[str, float | None]]:
-    logliks = {}
-    exp_loglik, _ = log_likelihood_exponential(samples)
+def fit_distributions(
+    samples: list[float],
+) -> tuple[str | None, dict[str, float | None], dict[str, dict[str, float] | None]]:
+    logliks: dict[str, float] = {}
+    params: dict[str, dict[str, float] | None] = {
+        "exponential": None,
+        "lognormal": None,
+        "weibull": None,
+    }
+    exp_loglik, exp_rate = log_likelihood_exponential(samples)
     if exp_loglik is not None:
         logliks["exponential"] = exp_loglik
-    lognorm_loglik, _ = log_likelihood_lognormal(samples)
+    if exp_rate is not None:
+        params["exponential"] = {"rate": exp_rate}
+    lognorm_loglik, lognorm_params = log_likelihood_lognormal(samples)
     if lognorm_loglik is not None:
         logliks["lognormal"] = lognorm_loglik
-    weibull_loglik, _ = log_likelihood_weibull(samples)
+    if lognorm_params is not None:
+        params["lognormal"] = {"mu": lognorm_params[0], "sigma": lognorm_params[1]}
+    weibull_loglik, weibull_params = log_likelihood_weibull(samples)
     if weibull_loglik is not None:
         logliks["weibull"] = weibull_loglik
+    if weibull_params is not None:
+        params["weibull"] = {"shape": weibull_params[0], "scale": weibull_params[1]}
     if not logliks:
-        return None, {"exponential": None, "lognormal": None, "weibull": None}
+        return None, {"exponential": None, "lognormal": None, "weibull": None}, params
     best = max(logliks.items(), key=lambda item: item[1])[0]
     return best, {
         "exponential": logliks.get("exponential"),
         "lognormal": logliks.get("lognormal"),
         "weibull": logliks.get("weibull"),
-    }
+    }, params
 
 
 def write_phase_durations(phases: list[TicketPhase]) -> None:
@@ -369,6 +383,7 @@ def write_phase_durations(phases: list[TicketPhase]) -> None:
 def write_distribution_summary(
     phase_samples: dict[str, list[float]],
     best_fits: dict[str, str | None],
+    best_fit_params: dict[str, dict[str, float] | None],
 ) -> None:
     with DISTRIBUTION_SUMMARY_CSV.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
@@ -387,10 +402,12 @@ def write_distribution_summary(
                 "p75",
                 "p90",
                 "best_fit",
+                "parameters",
             ]
         )
         for phase, samples in phase_samples.items():
             summary = compute_summary(samples)
+            params_payload = best_fit_params.get(phase) or {}
             writer.writerow(
                 [
                     phase,
@@ -406,6 +423,7 @@ def write_distribution_summary(
                     summary["p75"],
                     summary["p90"],
                     best_fits.get(phase),
+                    json.dumps(params_payload, sort_keys=True),
                 ]
             )
 
@@ -662,11 +680,13 @@ def main() -> None:
     }
 
     best_fits = {}
+    best_fit_params = {}
     for phase, samples in phase_samples.items():
-        best_fit, _ = select_best_fit(samples)
+        best_fit, _, params = fit_distributions(samples)
         best_fits[phase] = best_fit
+        best_fit_params[phase] = params.get(best_fit) if best_fit else None
 
-    write_distribution_summary(phase_samples, best_fits)
+    write_distribution_summary(phase_samples, best_fits, best_fit_params)
 
     exception_keys = [p.key for p in phases if p.exception_reason]
     exception_sample = exception_keys[:10]

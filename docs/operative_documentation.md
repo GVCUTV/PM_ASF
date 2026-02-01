@@ -209,6 +209,30 @@
 
 ---
 
+## ETL Script: `etl/3_phase_duration_distribution_etl.py` — Distribution Parameters Output
+
+**What it does**
+- Extends the phase-duration distribution summary output to include the fitted distribution parameters for each phase (dev/review/testing).
+- Records the parameter values in a JSON-formatted string in the `parameters` column of `etl/output/csv/distribution_summary.csv`, alongside the `best_fit` distribution name.
+
+**How it is implemented**
+- Fits exponential (rate), lognormal (mu, sigma), and Weibull (shape, scale) distributions per phase using the existing log-likelihood estimators.
+- Selects the best-fit distribution by maximum log-likelihood, then serializes the parameters for that best-fit distribution into a JSON object.
+- Writes the JSON string to the `parameters` column immediately after the `best_fit` column in the CSV schema.
+
+**How it must be used**
+- **Command:** `python etl/3_phase_duration_distribution_etl.py`
+- **Inputs:**
+  - `etl/output/csv/jira_issues_raw.csv` or `etl/output/csv/jira_tickets_raw.csv`
+  - `etl/output/csv/github_prs_raw.csv`
+- **Outputs:**
+  - `etl/output/csv/distribution_summary.csv` (now includes `parameters` column with JSON-formatted fitted parameters)
+  - `etl/output/csv/distribution_summary.md`
+  - `etl/output/phase_durations.csv`
+- **Limitations:** If there are insufficient or invalid samples for a phase, the `parameters` column contains an empty JSON object (`{}`) for that phase.
+
+---
+
 ## ETL Script: `etl/7_fit_distributions.py`
 
 **What it does**
