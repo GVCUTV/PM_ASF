@@ -386,3 +386,28 @@
 - **Limitations:** Jira transition history is not consumed by this script; when transitions are unavailable the markdown summary prompts for user confirmation of fallback boundary inference.
 
 ---
+
+## ETL Script: `etl/4_feedback_probabilities_etl.py`
+
+**What it does**
+- Extracts ticket-level feedback loop probabilities for review → development (changes requested in PR reviews) and testing → development (CI/check failures) using the available GitHub PR export data.
+- Produces a compact CSV summary with counts and probabilities based on tickets that have review or testing signals.
+
+**How it is implemented**
+- Loads `etl/output/csv/github_prs_raw.csv` and maps PRs to Jira tickets using the `BOOKKEEPER-<num>` key pattern in PR titles/bodies.
+- Derives review feedback flags from `requested_changes_count` and `pull_request_review_states` (marks feedback when `CHANGES_REQUESTED` appears or requested-changes count is positive).
+- Derives testing feedback flags from `check_runs_conclusions` and `combined_status_states` (marks feedback when any failure/error state is observed).
+- Aggregates to the ticket level so that any linked PR with feedback marks the ticket as having a feedback loop.
+
+**How it must be used**
+- **Command:** `python etl/4_feedback_probabilities_etl.py`
+- **Inputs:** `etl/output/csv/github_prs_raw.csv`
+- **Outputs:**
+  - `etl/output/csv/feedback_probabilities.csv`
+  - `etl/output/logs/feedback_probabilities.log`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+
+**Limitations**
+- Feedback signals are inferred heuristically from PR review/CI data; tickets without review or CI signal columns are excluded from the corresponding probability denominator.
+
+---
