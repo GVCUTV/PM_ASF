@@ -28,9 +28,9 @@ JIRA_TICKETS_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "jira_tickets
 JIRA_ISSUES_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "jira_issues_raw.csv"
 PRS_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "github_prs_raw.csv"
 
-PHASE_DURATIONS_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "phase_durations.csv"
+PHASE_DURATIONS_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "phase_durations.csv"
 DISTRIBUTION_SUMMARY_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "distribution_summary.csv"
-DISTRIBUTION_SUMMARY_MD = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "distribution_summary.md"
+DISTRIBUTION_SUMMARY_MD = Path(PROJECT_ROOT) / "etl" / "output" / "distribution_summary.md"
 PLOTS_DIR = Path(PROJECT_ROOT) / "etl" / "output" / "plots"
 
 JIRA_KEY_REGEX = re.compile(r"BOOKKEEPER-\d+", re.IGNORECASE)
