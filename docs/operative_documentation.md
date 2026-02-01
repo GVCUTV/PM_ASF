@@ -339,3 +339,34 @@
   - `plots/review_phase_histogram.png`
   - `plots/testing_phase_histogram.png`
 - **Limitations:** Jira transition history is not consumed by this script; when transitions are unavailable the markdown summary prompts for user confirmation of fallback boundary inference.
+
+---
+
+## ETL Script: `etl/state_parameters.py`
+
+**What it does**
+- Builds per-developer state transitions and duration PMFs for the workflow states **OFF**, **DEV**, **REV**, and **TEST**.
+- Reads GitHub PR assignees, joins them to Jira phase timestamps, expands per-developer events, and outputs a transition matrix plus per-state PMFs for simulation parameterization.
+
+**How it is implemented**
+- Loads `etl/output/csv/github_prs_raw.csv` and extracts assignee identities from the `assignees` column.
+- Loads `etl/output/csv/phase_durations.csv`, parses DEV/REV/TEST timestamps, and drops rows missing any required phase timestamp before event construction.
+- Extracts Jira keys from PR titles/bodies, maps them to phase timestamps, and constructs DEV/REV/TEST events with start/end times derived from the phase columns.
+- For each developer, events are sorted by start time; transitions are built with explicit `OFF → first_state`, gap-driven `state → OFF → next_state`, and final `state → OFF` transitions.
+- Collects positive-duration stints for each state (DEV/REV/TEST from event durations, OFF from idle gaps), rounds durations to 1e-3 days, counts occurrences, and normalizes to a PMF.
+- Emits a normalized transition matrix (rows/cols labeled `OFF,DEV,REV,TEST`) and one PMF CSV per state under `data/state_parameters/`.
+
+**How it must be used**
+- **Command:** `python etl/state_parameters.py`
+- **Inputs:**
+  - `etl/output/csv/github_prs_raw.csv`
+  - `etl/output/csv/phase_durations.csv`
+  - `etl/output/csv/distribution_summary.csv` (presence check only)
+- **Outputs:**
+  - `data/state_parameters/transition_matrix.csv`
+  - `data/state_parameters/pmf_off.csv`
+  - `data/state_parameters/pmf_dev.csv`
+  - `data/state_parameters/pmf_rev.csv`
+  - `data/state_parameters/pmf_test.csv`
+- **Validation:** The script checks that each transition-matrix row and each PMF sums to ~1.0 within a configurable tolerance.
+- **Limitations:** PRs without Jira keys or assignees are skipped; phase rows missing any required timestamps are excluded from event generation.
