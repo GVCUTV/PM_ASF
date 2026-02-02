@@ -209,6 +209,26 @@
 
 ---
 
+## ETL Script: `etl/5_arrival_rate.py`
+
+**What it does**
+- Computes the arrival rate of Jira issues (tickets) per day from the raw Jira export CSV.
+- Writes a one-row CSV containing the count of tickets, observation window, span in days, and arrival rate.
+
+**How it is implemented**
+- Reads `etl/output/csv/jira_issues_raw.csv` (falling back to `jira_tickets_raw.csv` if needed) and parses `fields.created` timestamps.
+- Uses the earliest and latest creation timestamps to compute the observation window length in days.
+- Calculates arrival rate as `ticket_count / span_days` and writes the output to `etl/output/csv/arrival_rate_jira_issues.csv`.
+
+**How it must be used**
+- **Command:** `python etl/5_arrival_rate.py`
+- **Inputs:** `etl/output/csv/jira_issues_raw.csv` (raw Jira export).
+- **Outputs:** `etl/output/csv/arrival_rate_jira_issues.csv`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+- **Limitations:** Requires at least two Jira issues with valid `fields.created` timestamps to compute a non-zero span.
+
+---
+
 ## State-Parameter Extraction: `etl/state_parameters.py`
 
 **What it does**
