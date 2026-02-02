@@ -390,47 +390,41 @@
 ## ETL Script: `etl/4_feedback_probabilities_etl.py`
 
 **What it does**
-- Extracts ticket-level feedback loop probabilities for review → development (changes requested in PR reviews) and testing → development (CI/test failures that later succeed) using data-driven signals from the GitHub PR export data.
+- Extracts PR-level feedback loop probabilities for review → development (changes requested in PR reviews) and testing → development (CI/check failures) using raw GitHub PR export data.
 - Filters PRs into a user-supplied time window before computing probabilities.
-- Produces a compact CSV summary with counts and probabilities based on tickets that have review or testing signals in the selected window.
+- Produces a compact CSV summary with counts and probabilities based on the filtered PR set.
 
 **How it is implemented**
-- Loads `etl/output/csv/github_prs_raw.csv` and maps PRs to Jira tickets using the `BOOKKEEPER-<num>` key pattern in PR titles/bodies.
+- Loads `etl/output/csv/github_prs_raw.csv`.
 - Selects a created timestamp column from the available CSV headers (or `--created-col` if supplied), normalizes it to UTC, and filters PRs into the `[start, end)` window supplied on the CLI (defaults to the full data range when omitted).
-- Derives review feedback signals using a hierarchy:
-  - Numeric counters (e.g., `review_rounds`, `requested_changes_count`, `reviews_count`) are converted to numbers and mark rework when the value exceeds 1.
-  - Boolean flags (e.g., `review_rework_flag`, `reopened_flag`) are parsed for truthy values when numeric counters are unavailable.
-  - Review-state lists (e.g., `pull_request_review_states`) are parsed for `changes_requested` when counters and flags are missing.
-- Derives testing feedback using a similar hierarchy:
-  - Boolean flags (e.g., `ci_failed_then_fix`, `ci_failed`) are parsed for truthy values.
-  - Status-history lists (e.g., `check_runs_conclusions`, `combined_status_states`) are parsed for a failure token followed by a later success token.
-- Aggregates to the ticket level so that any linked PR with feedback marks the ticket as having a feedback loop.
-- Writes an enriched CSV (`etl/output/csv/feedback_enriched.csv`) when derived columns like `review_rounds`, `review_rework_flag`, or `ci_failed_then_fix` are missing in the raw export.
+- Derives review feedback when either:
+  - `requested_changes_count` is greater than zero, or
+  - `pull_request_review_states` contains `CHANGES_REQUESTED`.
+- Derives testing feedback when `check_runs_conclusions` contains a `failure` entry.
+- Computes probabilities as feedback-count / total-PR-count within the filtered window (no Jira ticket aggregation).
 
 **How it must be used**
 - **Command:** `python etl/4_feedback_probabilities_etl.py [--start <ISO8601>] [--end <ISO8601>] [--created-col <column>]`
 - **Inputs:** `etl/output/csv/github_prs_raw.csv`
 - **Outputs:**
   - `etl/output/csv/feedback_probabilities.csv`
-  - `etl/output/csv/feedback_enriched.csv` (only when enrichment is needed)
   - `etl/output/logs/feedback_probabilities.log`
 - **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
 
 **Limitations**
-- Feedback signals are inferred from PR review/CI data within the supplied window; the script raises an error when no signals are available in the time slice.
+- Feedback signals are inferred from PR review/CI data within the supplied window; the script raises an error when required raw columns are missing.
 
 ---
 
 ## Feedback Probability Extraction (Data-Driven Windowed Signals)
 
 **What it does**
-- Computes `FEEDBACK_P_DEV` and `FEEDBACK_P_TEST` from PR data inside a deterministic time window, using only available signals in the exports.
+- Computes `FEEDBACK_P_DEV` and `FEEDBACK_P_TEST` from PR data inside a deterministic time window, using raw review and CI signals.
 
 **How it is implemented**
 - The ETL script accepts optional `--start` and `--end` timestamps and converts the detected created timestamp column to UTC-naive timestamps before filtering.
-- It selects the highest-priority available signal set (numeric → boolean → list-based for review; boolean → list-based for test) and calculates the probability as the mean of per-ticket feedback indicators.
-- When raw exports lack required columns, the ETL derives `review_rounds`, `review_rework_flag`, and `ci_failed_then_fix` by parsing review-state and CI-status histories, and logs which columns were used.
+- It evaluates feedback at the PR level using `requested_changes_count`/`pull_request_review_states` for review and `check_runs_conclusions` for testing, then computes probabilities as the share of PRs with feedback.
 
 **How it must be used**
-- Provide ISO8601 timestamps to define the window when you want to restrict the data slice, and ensure the raw export includes at least one review and one CI signal column.
-- Review the log output to confirm which signals were selected and to validate the computed probabilities.
+- Provide ISO8601 timestamps to define the window when you want to restrict the data slice, and ensure the raw export includes `requested_changes_count` or `pull_request_review_states` plus `check_runs_conclusions`.
+- Review the log output to confirm which columns were used and to validate the computed probabilities.

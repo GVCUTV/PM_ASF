@@ -1,7 +1,7 @@
 # v1
 # file: etl/4_feedback_probabilities_etl.py
 """
-Extract ticket-level feedback probabilities for:
+Extract PR-level feedback probabilities for:
 - Review -> Development (changes requested during review)
 - Testing -> Development (CI/check failures during testing)
 """
@@ -11,13 +11,12 @@ from __future__ import annotations
 import argparse
 import ast
 import csv
-import json
 import logging
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 import sys
+import json
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
@@ -30,60 +29,12 @@ OUTPUT_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "feedback_probabili
 ENRICHED_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "feedback_enriched.csv"
 LOG_PATH = Path(PROJECT_ROOT) / "etl" / "output" / "logs" / "feedback_probabilities.log"
 
-JIRA_KEY_REGEX = re.compile(r"BOOKKEEPER-\d+", re.IGNORECASE)
-
 CREATED_COL_CANDIDATES = ("created_at", "created", "fields.created")
 
-REVIEW_NUMERIC_COLUMNS = (
-    "review_rounds",
-    "pr_review_rounds",
-    "requested_changes_count",
-    "reviews_count",
-)
-REVIEW_FLAG_COLUMNS = ("review_rework_flag", "reopened_flag", "requested_changes_flag")
-REVIEW_LIST_COLUMNS = (
-    "pull_request_review_states",
-    "review_states",
-    "pr_review_states",
-    "review_decisions",
-    "requested_changes_states",
-)
+REVIEW_COUNT_COLUMN = "requested_changes_count"
+REVIEW_STATES_COLUMN = "pull_request_review_states"
+TEST_CONCLUSIONS_COLUMN = "check_runs_conclusions"
 
-TEST_FLAG_COLUMNS = ("ci_failed_then_fix", "ci_failed", "build_failed", "qa_failed_flag")
-TEST_LIST_COLUMNS = (
-    "check_runs_conclusions",
-    "ci_status_history",
-    "combined_statuses",
-    "workflow_conclusions",
-    "build_state_history",
-    "statuses",
-    "ci_conclusion",
-    "check_suite_conclusion",
-    "build_conclusion",
-)
-
-TRUTHY_VALUES = {"true", "1", "yes", "y", "t"}
-FAILURE_TOKENS = {
-    "fail",
-    "failure",
-    "failed",
-    "error",
-    "timed_out",
-    "timeout",
-    "cancelled",
-    "canceled",
-    "aborted",
-    "broken",
-}
-SUCCESS_TOKENS = {"success", "succeeded", "passed", "ok", "green", "completed_success"}
-
-
-@dataclass
-class TicketFeedback:
-    has_review_signal: bool = False
-    has_review_feedback: bool = False
-    has_testing_signal: bool = False
-    has_testing_feedback: bool = False
 
 
 def setup_logging() -> None:
@@ -150,43 +101,6 @@ def _to_listish(value: object) -> list[str]:
     return [token.strip() for token in tokens if token.strip()]
 
 
-def extract_jira_keys(*values: str | None) -> set[str]:
-    keys: set[str] = set()
-    for value in values:
-        if not value:
-            continue
-        for match in JIRA_KEY_REGEX.findall(str(value)):
-            keys.add(match.upper())
-    return keys
-
-
-def _is_truthy(value: object) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return False
-    return str(value).strip().lower() in TRUTHY_VALUES
-
-
-def _truthy_fraction(values: list[object]) -> float:
-    if not values:
-        return 0.0
-    truthy = sum(1 for value in values if _is_truthy(value))
-    return truthy / len(values)
-
-
-def _has_fail_then_success(tokens: list[str]) -> bool:
-    lowered = [token.strip().lower() for token in tokens if token and str(token).strip()]
-    failure_indices = [
-        idx for idx, token in enumerate(lowered) if any(failure in token for failure in FAILURE_TOKENS)
-    ]
-    if not failure_indices:
-        return False
-    first_failure = min(failure_indices)
-    for token in lowered[first_failure + 1 :]:
-        if any(success in token for success in SUCCESS_TOKENS):
-            return True
-    return False
 
 
 def _parse_float(value: object) -> float | None:
@@ -203,48 +117,17 @@ def _parse_float(value: object) -> float | None:
         return None
 
 
-def review_feedback_from_row(
-    row: dict[str, str],
-    numeric_columns: list[str],
-    flag_columns: list[str],
-    list_columns: list[str],
-) -> tuple[bool, bool]:
-    if numeric_columns:
-        values = [_parse_float(row.get(col)) for col in numeric_columns]
-        numeric_values = [value for value in values if value is not None]
-        has_signal = bool(numeric_values)
-        has_feedback = bool(numeric_values and max(numeric_values) > 1)
-        return has_signal, has_feedback
-    if flag_columns:
-        flags = [row.get(col) for col in flag_columns]
-        has_signal = any(value not in (None, "") for value in flags)
-        has_feedback = any(_is_truthy(value) for value in flags)
-        return has_signal, has_feedback
-    list_values = [_to_listish(row.get(col)) for col in list_columns]
-    has_signal = any(tokens for tokens in list_values)
-    has_feedback = any(
-        "changes_requested" in token.lower()
-        for tokens in list_values
-        for token in tokens
-        if token
-    )
-    return has_signal, has_feedback
+def review_feedback_from_row(row: dict[str, str]) -> bool:
+    requested_changes = _parse_float(row.get(REVIEW_COUNT_COLUMN)) or 0.0
+    if requested_changes > 0:
+        return True
+    review_states = _to_listish(row.get(REVIEW_STATES_COLUMN))
+    return any(token.strip().lower() == "changes_requested" for token in review_states)
 
 
-def testing_feedback_from_row(
-    row: dict[str, str],
-    flag_columns: list[str],
-    list_columns: list[str],
-) -> tuple[bool, bool]:
-    if flag_columns:
-        flags = [row.get(col) for col in flag_columns]
-        has_signal = any(value not in (None, "") for value in flags)
-        has_feedback = any(_is_truthy(value) for value in flags)
-        return has_signal, has_feedback
-    list_values = [_to_listish(row.get(col)) for col in list_columns]
-    has_signal = any(tokens for tokens in list_values)
-    has_feedback = any(_has_fail_then_success(tokens) for tokens in list_values)
-    return has_signal, has_feedback
+def testing_feedback_from_row(row: dict[str, str]) -> bool:
+    check_runs = _to_listish(row.get(TEST_CONCLUSIONS_COLUMN))
+    return any(token.strip().lower() == "failure" for token in check_runs)
 
 
 def load_pr_rows() -> tuple[list[dict[str, str]], list[str]]:
@@ -266,92 +149,20 @@ def load_jira_rows() -> list[dict[str, str]]:
 
 
 def ensure_required_signal_columns(header: list[str]) -> None:
-    review_columns = set(REVIEW_NUMERIC_COLUMNS + REVIEW_FLAG_COLUMNS + REVIEW_LIST_COLUMNS)
-    test_columns = set(TEST_FLAG_COLUMNS + TEST_LIST_COLUMNS + ("combined_status_states",))
-    review_available = review_columns.intersection(header)
-    test_available = test_columns.intersection(header)
-    if not review_available:
+    missing = []
+    if REVIEW_COUNT_COLUMN not in header and REVIEW_STATES_COLUMN not in header:
+        missing.append(f"{REVIEW_COUNT_COLUMN} or {REVIEW_STATES_COLUMN}")
+    if TEST_CONCLUSIONS_COLUMN not in header:
+        missing.append(TEST_CONCLUSIONS_COLUMN)
+    if missing:
         raise ValueError(
-            "Missing review feedback signals in raw data. "
-            f"Expected one of: {sorted(review_columns)}. "
-            "Please export the required review signal columns."
+            "Missing feedback signal columns in raw data. "
+            f"Expected: {', '.join(missing)}."
         )
-    if not test_available:
-        raise ValueError(
-            "Missing testing/CI feedback signals in raw data. "
-            f"Expected one of: {sorted(test_columns)}. "
-            "Please export the required CI/status signal columns."
-        )
-
-
-def derive_review_rounds(row: dict[str, str]) -> float | None:
-    for col in ("review_rounds", "pr_review_rounds", "requested_changes_count", "reviews_count"):
-        value = _parse_float(row.get(col))
-        if value is not None:
-            return value
-    for col in REVIEW_LIST_COLUMNS:
-        tokens = _to_listish(row.get(col))
-        if tokens:
-            has_changes = any("changes_requested" in token.lower() for token in tokens)
-            return 2.0 if has_changes else 1.0
-    return None
-
-
-def derive_review_rework_flag(row: dict[str, str], review_rounds: float | None) -> bool:
-    if review_rounds is not None and review_rounds > 1:
-        return True
-    for col in REVIEW_LIST_COLUMNS:
-        tokens = _to_listish(row.get(col))
-        if any("changes_requested" in token.lower() for token in tokens):
-            return True
-    return False
-
-
-def derive_ci_failed_then_fix(row: dict[str, str]) -> bool:
-    flag_values = [row.get(col) for col in TEST_FLAG_COLUMNS if col in row]
-    if any(_is_truthy(value) for value in flag_values):
-        return True
-    list_columns = [col for col in TEST_LIST_COLUMNS if col in row]
-    if "combined_statuses" not in row and "combined_status_states" in row:
-        list_columns.append("combined_status_states")
-    for col in list_columns:
-        if _has_fail_then_success(_to_listish(row.get(col))):
-            return True
-    return False
 
 
 def enrich_pr_rows(pr_rows: list[dict[str, str]], header: list[str]) -> tuple[list[dict[str, str]], list[str]]:
-    enriched_rows: list[dict[str, str]] = []
-    added_columns: list[str] = []
-    needs_review_rounds = "review_rounds" not in header
-    needs_review_rework = "review_rework_flag" not in header
-    needs_ci_failed = "ci_failed_then_fix" not in header
-    needs_combined_statuses = "combined_statuses" not in header and "combined_status_states" in header
-
-    if needs_review_rounds:
-        added_columns.append("review_rounds")
-    if needs_review_rework:
-        added_columns.append("review_rework_flag")
-    if needs_ci_failed:
-        added_columns.append("ci_failed_then_fix")
-    if needs_combined_statuses:
-        added_columns.append("combined_statuses")
-
-    for row in pr_rows:
-        updated = dict(row)
-        review_rounds = derive_review_rounds(updated) if needs_review_rounds else _parse_float(updated.get("review_rounds"))
-        if needs_review_rounds:
-            updated["review_rounds"] = "" if review_rounds is None else str(review_rounds)
-        if needs_review_rework:
-            review_rework = derive_review_rework_flag(updated, review_rounds)
-            updated["review_rework_flag"] = "true" if review_rework else "false"
-        if needs_ci_failed:
-            ci_failed = derive_ci_failed_then_fix(updated)
-            updated["ci_failed_then_fix"] = "true" if ci_failed else "false"
-        if needs_combined_statuses:
-            updated["combined_statuses"] = updated.get("combined_status_states", "")
-        enriched_rows.append(updated)
-    return enriched_rows, added_columns
+    return pr_rows, []
 
 
 def compute_feedback_probabilities(
@@ -397,77 +208,20 @@ def compute_feedback_probabilities(
             f"using created column '{created_col}'."
         )
 
-    numeric_columns = [
-        col
-        for col in REVIEW_NUMERIC_COLUMNS
-        if any(_parse_float(row.get(col)) is not None for row in filtered_rows)
-    ]
-    flag_columns = [
-        col
-        for col in REVIEW_FLAG_COLUMNS
-        if any(row.get(col) not in (None, "") for row in filtered_rows)
-    ]
-    list_columns = [
-        col
-        for col in REVIEW_LIST_COLUMNS
-        if any(_to_listish(row.get(col)) for row in filtered_rows)
-    ]
-    review_numeric = numeric_columns
-    review_flags = [] if numeric_columns else flag_columns
-    review_lists = [] if (numeric_columns or flag_columns) else list_columns
-    if not (review_numeric or review_flags or review_lists):
-        raise ValueError("No review feedback signals available in the time window slice.")
-
-    test_flags = [
-        col
-        for col in TEST_FLAG_COLUMNS
-        if any(row.get(col) not in (None, "") for row in filtered_rows)
-    ]
-    test_lists = [
-        col
-        for col in TEST_LIST_COLUMNS
-        if any(_to_listish(row.get(col)) for row in filtered_rows)
-    ]
-    if "combined_statuses" not in test_lists and any(
-        _to_listish(row.get("combined_status_states")) for row in filtered_rows
-    ):
-        test_lists.append("combined_statuses")
-        for row in filtered_rows:
-            if "combined_statuses" not in row and "combined_status_states" in row:
-                row["combined_statuses"] = row.get("combined_status_states", "")
-    test_flags = test_flags
-    test_lists = [] if test_flags else test_lists
-    if not (test_flags or test_lists):
-        raise ValueError("No testing/CI feedback signals available in the time window slice.")
-
-    ticket_flags: dict[str, TicketFeedback] = {}
-    for row in filtered_rows:
-        jira_keys = extract_jira_keys(row.get("title"), row.get("body"))
-        if not jira_keys:
-            continue
-        review_signal, review_feedback = review_feedback_from_row(row, review_numeric, review_flags, review_lists)
-        testing_signal, testing_feedback = testing_feedback_from_row(row, test_flags, test_lists)
-        for key in jira_keys:
-            feedback = ticket_flags.setdefault(key, TicketFeedback())
-            feedback.has_review_signal = feedback.has_review_signal or review_signal
-            feedback.has_review_feedback = feedback.has_review_feedback or review_feedback
-            feedback.has_testing_signal = feedback.has_testing_signal or testing_signal
-            feedback.has_testing_feedback = feedback.has_testing_feedback or testing_feedback
-
-    review_total = sum(1 for feedback in ticket_flags.values() if feedback.has_review_signal)
-    review_feedback_total = sum(1 for feedback in ticket_flags.values() if feedback.has_review_feedback)
-    testing_total = sum(1 for feedback in ticket_flags.values() if feedback.has_testing_signal)
-    testing_feedback_total = sum(1 for feedback in ticket_flags.values() if feedback.has_testing_feedback)
+    review_feedback_total = sum(1 for row in filtered_rows if review_feedback_from_row(row))
+    testing_feedback_total = sum(1 for row in filtered_rows if testing_feedback_from_row(row))
+    review_total = len(filtered_rows)
+    testing_total = len(filtered_rows)
 
     review_prob = (review_feedback_total / review_total) if review_total else 0.0
     testing_prob = (testing_feedback_total / testing_total) if testing_total else 0.0
 
+    header_keys = set(filtered_rows[0].keys())
     metadata = {
-        "review_numeric_columns": review_numeric,
-        "review_flag_columns": review_flags,
-        "review_list_columns": review_lists,
-        "test_flag_columns": test_flags,
-        "test_list_columns": test_lists,
+        "review_columns_used": [
+            col for col in (REVIEW_COUNT_COLUMN, REVIEW_STATES_COLUMN) if col in header_keys
+        ],
+        "test_columns_used": [TEST_CONCLUSIONS_COLUMN] if TEST_CONCLUSIONS_COLUMN in header_keys else [],
         "created_missing": [str(missing_created)],
     }
 
@@ -561,11 +315,8 @@ def main() -> None:
     )
     logging.info("Feedback time window: [%s, %s)", args.start or "MIN", args.end or "MAX")
     logging.info("Created timestamp column: %s", created_col)
-    logging.info("Review numeric columns used: %s", metadata["review_numeric_columns"])
-    logging.info("Review flag columns used: %s", metadata["review_flag_columns"])
-    logging.info("Review list columns used: %s", metadata["review_list_columns"])
-    logging.info("Test flag columns used: %s", metadata["test_flag_columns"])
-    logging.info("Test list columns used: %s", metadata["test_list_columns"])
+    logging.info("Review columns used: %s", metadata["review_columns_used"])
+    logging.info("Test columns used: %s", metadata["test_columns_used"])
     logging.info("Rows missing created timestamp: %s", metadata["created_missing"][0])
     for metric, values in metrics.items():
         logging.info(
