@@ -448,3 +448,29 @@
 **How it must be used**
 - Provide ISO8601 timestamps to define the window when you want to restrict the data slice, and ensure the raw export includes `requested_changes_count` or `pull_request_review_states` plus `check_runs_conclusions`.
 - Review the log output to confirm which columns were used and to validate the computed probabilities.
+
+---
+
+## ETL Script: `etl/output/csv/6_extract_initial_dev_count.py`
+
+**What it does**
+- Calculates the initial number of developers in each workflow stage (DEV/REV/TEST) for simulation initialization.
+- Outputs a compact CSV summary for downstream simulation configuration.
+
+**How it is implemented**
+- Loads raw Jira issues from `etl/output/csv/jira_issues_raw.csv` and GitHub PR data from `etl/output/csv/github_prs_raw.csv`.
+- Extracts Jira keys from PR title/body to associate PRs with Jira issues, then derives phase boundaries:
+  - Dev start = Jira created timestamp.
+  - Review start = earliest PR created timestamp.
+  - Review end = latest PR merged timestamp (fallback to PR closed timestamp).
+  - Testing end = Jira resolution timestamp (fallback to review end).
+- Collects PR assignees as developers, builds per-developer stage events, and assigns each developer to their earliest stage event to define the initial stage distribution.
+
+**How it must be used**
+- **Command:** `python etl/output/csv/6_extract_initial_dev_count.py`
+- **Inputs:**
+  - `etl/output/csv/jira_issues_raw.csv`
+  - `etl/output/csv/github_prs_raw.csv`
+- **Outputs:**
+  - `etl/output/csv/initial_dev_count.csv`
+- **Limitations:** Requires PR assignees to be present to attribute developers to stages; Jira issues without linked PRs are ignored.
