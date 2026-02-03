@@ -540,3 +540,76 @@
 
 **How it must be used**
 - Run the same command as before; the output CSV now includes an `OFF` row representing idle developers based on observed gaps.
+
+---
+
+## Discrete-Event Simulation Workflow (Finite and Infinite Horizon)
+
+**What it does**
+- Implements a discrete-event simulation of the ASF BookKeeper workflow with ticket arrivals, DEV → REVIEW → TESTING stages, and feedback loops back to development.
+- Models developer capacity using a semi-Markov developer pool that transitions among OFF/DEV/REV/TEST states to determine concurrent service capacity.
+- Produces per-ticket metrics, aggregate performance metrics, and steady-state batch-means summaries with confidence intervals.
+
+**How it is implemented**
+- Core DES logic lives in `simulation/core/`:
+  - `models.py` defines `Ticket`, `Event`, `SystemState`, and stage/event enums.
+  - `engine.py` implements the event queue, time advance, arrival/service-completion handlers, FIFO queues, and routing.
+  - `developer_pool.py` implements the semi-Markov developer pool using a transition matrix and stint PMFs, providing time-varying stage capacity.
+  - `rng.py` provides stream-specific RNGs for arrivals, services, routing, and developer transitions.
+  - `metrics.py` accumulates per-stage throughput/utilization/queue-length time averages and per-ticket time-in-system, plus batch statistics.
+  - `outputs.py` writes per-ticket and summary CSVs, and batch means + CI outputs.
+- Inputs are loaded from ETL outputs via `inputs.py`, including:
+  - Arrival rate (`etl/output/csv/arrival_rate_jira_issues.csv`).
+  - Feedback probabilities (`etl/output/csv/feedback_probabilities.csv`).
+  - Developer transition matrix (`etl/output/csv/transition_matrix.csv`).
+  - Stint PMFs (`etl/output/csv/stint_PMF.csv`).
+  - Service time distributions (`data/state_parameters/service_params.json`, with fallback to `etl/output/csv/distribution_summary.csv`).
+  - Developer count inferred from `etl/output/csv/initial_dev_count.csv` when available, or from `data/state_parameters/developer_events.csv`.
+- Randomness is deterministic when the seed is fixed; each stochastic input uses its own RNG stream.
+
+**How to run it**
+1. Ensure ETL outputs listed above exist (run ETL scripts in prior sections).
+2. Run the finite-horizon simulation (365 days by default):
+   - `python simulation/finite_horizon/run_simulation.py --seed 12345 --horizon 365`
+   - Or make the script executable and run it directly: `chmod +x simulation/finite_horizon/run_simulation.py && simulation/finite_horizon/run_simulation.py --seed 12345 --horizon 365`
+   - Outputs:
+     - `simulation/finite_horizon/output/tickets.csv`
+     - `simulation/finite_horizon/output/summary.csv`
+3. Run the infinite-horizon batch-means simulation (3,650 days, 10 batches by default):
+   - `python simulation/infinite_horizon/run_simulation.py --seed 12345 --total-time 3650 --batches 10`
+   - Or make the script executable and run it directly: `chmod +x simulation/infinite_horizon/run_simulation.py && simulation/infinite_horizon/run_simulation.py --seed 12345 --total-time 3650 --batches 10`
+   - Outputs:
+     - `simulation/infinite_horizon/output/summary_batch_means.csv`
+     - `simulation/infinite_horizon/output/summary_ci.csv`
+
+**Limitations and assumptions**
+- Requires precomputed ETL outputs; missing files will prevent the simulation from running.
+- Service-time distributions are assumed to be parametric fits (lognormal/Weibull/exponential) derived by ETL scripts.
+- Developer capacity changes are driven by the semi-Markov model; if capacity drops below busy servers, service continues but no new work starts until capacity is available.
+- Confidence intervals use a normal approximation over batch means (no external stats dependency).
+
+---
+
+## Simulation Input Calibration and Diagnostics (Service-Time Validation)
+
+**What it does**
+- Adds a calibration step that compares ETL phase-duration samples to the fitted service-time distributions and applies a conservative cap at the empirical 99th percentile to prevent unrealistic heavy-tail stalls.
+- Converts service-time samples from hours to days when phase-duration inputs are expressed in hours, keeping the simulation time unit consistent with the arrival rate (per day).
+- Writes a diagnostics CSV that reports the empirical statistics and the configured cap/scale values used during the run.
+
+**How it is implemented**
+- The runners load `etl/output/csv/phase_durations.csv` and compute per-stage empirical statistics (mean, p95, p99, max) from the `*_duration_hours` columns.
+- A service-time scale factor of `1/24` is applied when the input columns are in hours, ensuring all service times are in days.
+- The service-time cap is set to the empirical p99 (in days) for each stage; sampled service times above the cap are clipped.
+- Diagnostics are written to `service_time_diagnostics.csv` in each output folder, capturing the fitted distribution, parameters, scale, and empirical stats.
+
+**How it must be used**
+1. Ensure `etl/output/csv/phase_durations.csv` is available (produced by the phase-duration ETL scripts).
+2. Run either simulation script as usual.
+3. Review diagnostics output:
+   - `simulation/finite_horizon/output/service_time_diagnostics.csv`
+   - `simulation/infinite_horizon/output/service_time_diagnostics.csv`
+
+**Limitations and assumptions**
+- The cap uses empirical percentiles and will clip rare extreme samples; this is intended to keep simulated timelines aligned with observed ETL data.
+- If `phase_durations.csv` is missing or empty, the simulation runs without caps or scaling and diagnostics will reflect empty empirical stats.
