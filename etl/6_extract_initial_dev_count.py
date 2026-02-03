@@ -26,8 +26,8 @@ PRS_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "github_prs_raw.csv"
 OUTPUT_CSV = Path(PROJECT_ROOT) / "etl" / "output" / "csv" / "initial_dev_count.csv"
 
 JIRA_KEY_REGEX = re.compile(r"BOOKKEEPER-\d+", re.IGNORECASE)
-STAGES = ("DEV", "REV", "TEST")
-STAGE_PRIORITY = {"DEV": 0, "REV": 1, "TEST": 2}
+STAGES = ("DEV", "REV", "TEST", "OFF")
+ACTIVE_STAGES = ("DEV", "REV", "TEST")
 
 
 @dataclass(frozen=True)
@@ -183,7 +183,7 @@ def build_assignee_map(pr_rows: list[dict[str, str]]) -> dict[str, set[str]]:
 
 
 def add_stage_event(
-    developer_events: dict[str, list[tuple[datetime, str]]],
+    developer_events: dict[str, list[tuple[datetime, datetime, str]]],
     developer: str,
     stage: str,
     start: datetime | None,
@@ -193,14 +193,14 @@ def add_stage_event(
         return
     if end < start:
         return
-    developer_events[developer].append((start, stage))
+    developer_events[developer].append((start, end, stage))
 
 
 def compute_initial_counts(
     phases: dict[str, PhaseBounds],
     assignee_map: dict[str, set[str]],
 ) -> dict[str, int]:
-    developer_events: dict[str, list[tuple[datetime, str]]] = defaultdict(list)
+    developer_events: dict[str, list[tuple[datetime, datetime, str]]] = defaultdict(list)
     for key, developers in assignee_map.items():
         bounds = phases.get(key)
         if not bounds:
@@ -226,12 +226,21 @@ def compute_initial_counts(
     for events in developer_events.values():
         if not events:
             continue
-        first_start, first_stage = min(
-            events,
-            key=lambda item: (item[0], STAGE_PRIORITY.get(item[1], 99)),
+        stages_for_dev = {stage for _, _, stage in events}
+        for stage in ACTIVE_STAGES:
+            if stage in stages_for_dev:
+                counts[stage] += 1
+        events_sorted = sorted(events, key=lambda item: (item[0], item[1], item[2]))
+        has_idle_gap = any(
+            next_start > current_end
+            for (current_start, current_end, _), (next_start, _, _) in zip(
+                events_sorted,
+                events_sorted[1:],
+            )
+            if current_start and current_end and next_start
         )
-        if first_stage in counts:
-            counts[first_stage] += 1
+        if has_idle_gap:
+            counts["OFF"] += 1
     return counts
 
 

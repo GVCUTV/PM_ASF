@@ -454,7 +454,7 @@
 ## ETL Script: `etl/output/csv/6_extract_initial_dev_count.py`
 
 **What it does**
-- Calculates the initial number of developers in each workflow stage (DEV/REV/TEST) for simulation initialization.
+- Calculates the initial number of developers in each workflow stage (DEV/REV/TEST) plus the number of developers that have an idle (OFF) gap between assignments for simulation initialization.
 - Outputs a compact CSV summary for downstream simulation configuration.
 
 **How it is implemented**
@@ -464,7 +464,8 @@
   - Review start = earliest PR created timestamp.
   - Review end = latest PR merged timestamp (fallback to PR closed timestamp).
   - Testing end = Jira resolution timestamp (fallback to review end).
-- Collects PR assignees as developers, builds per-developer stage events, and assigns each developer to their earliest stage event to define the initial stage distribution.
+- Collects PR assignees as developers, builds per-developer stage events, then counts how many developers appear in each stage at least once.
+- Identifies OFF (idle) developers by detecting gaps between consecutive stage events for each developer, marking them as OFF when a gap exists.
 
 **How it must be used**
 - **Command:** `python etl/output/csv/6_extract_initial_dev_count.py`
@@ -473,4 +474,17 @@
   - `etl/output/csv/github_prs_raw.csv`
 - **Outputs:**
   - `etl/output/csv/initial_dev_count.csv`
-- **Limitations:** Requires PR assignees to be present to attribute developers to stages; Jira issues without linked PRs are ignored.
+- **Limitations:** Requires PR assignees to be present to attribute developers to stages; Jira issues without linked PRs are ignored. OFF counts are derived from gaps between observed stage events.
+
+---
+
+## Update: Initial Developer Counts with OFF (Idle) Gaps
+
+**What it does**
+- Extends the initial developer count extraction to include OFF (idle) developers who have at least one gap between consecutive stage events.
+
+**How it is implemented**
+- The ETL script now tracks per-developer stage intervals (start/end), uses them to count presence in DEV/REV/TEST, and flags OFF when any time gap is detected between adjacent events.
+
+**How it must be used**
+- Run the same command as before; the output CSV now includes an `OFF` row representing idle developers based on observed gaps.
