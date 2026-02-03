@@ -571,11 +571,13 @@
 1. Ensure ETL outputs listed above exist (run ETL scripts in prior sections).
 2. Run the finite-horizon simulation (365 days by default):
    - `python simulation/finite_horizon/run_simulation.py --seed 12345 --horizon 365`
+   - Or make the script executable and run it directly: `chmod +x simulation/finite_horizon/run_simulation.py && simulation/finite_horizon/run_simulation.py --seed 12345 --horizon 365`
    - Outputs:
      - `simulation/finite_horizon/output/tickets.csv`
      - `simulation/finite_horizon/output/summary.csv`
 3. Run the infinite-horizon batch-means simulation (3,650 days, 10 batches by default):
    - `python simulation/infinite_horizon/run_simulation.py --seed 12345 --total-time 3650 --batches 10`
+   - Or make the script executable and run it directly: `chmod +x simulation/infinite_horizon/run_simulation.py && simulation/infinite_horizon/run_simulation.py --seed 12345 --total-time 3650 --batches 10`
    - Outputs:
      - `simulation/infinite_horizon/output/summary_batch_means.csv`
      - `simulation/infinite_horizon/output/summary_ci.csv`
