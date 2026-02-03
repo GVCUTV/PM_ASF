@@ -17,6 +17,7 @@ class SimulationConfig:
     horizon: float
     service_time_scale: float = 1.0
     service_time_caps: Optional[Dict[Stage, float]] = None
+    service_time_samples: Optional[Dict[Stage, List[float]]] = None
 
 
 class SimulationEngine:
@@ -109,6 +110,17 @@ class SimulationEngine:
             available -= 1
 
     def _sample_service_time(self, stage: Stage) -> float:
+        if self.config.service_time_samples and stage in self.config.service_time_samples:
+            samples = self.config.service_time_samples[stage]
+            if samples:
+                index = int(self.rngs.services.random() * len(samples))
+                service_time = samples[index]
+                service_time *= self.config.service_time_scale
+                if self.config.service_time_caps and stage in self.config.service_time_caps:
+                    cap = self.config.service_time_caps[stage]
+                    if cap is not None:
+                        service_time = min(service_time, cap)
+                return service_time
         params = self.config.service_params[stage]
         distribution = params["distribution"].lower()
         parameters = params["parameters"]

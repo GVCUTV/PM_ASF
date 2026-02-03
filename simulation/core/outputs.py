@@ -121,14 +121,17 @@ def write_service_time_diagnostics(
     service_params: Dict[Stage, Dict[str, Dict[str, float]]],
     service_time_scale: float,
     service_time_caps: Dict[Stage, float],
+    sample_counts: Dict[Stage, int],
     path: str,
 ) -> None:
     fieldnames = [
         "stage",
+        "sampling_mode",
         "distribution",
         "parameters",
         "service_time_scale",
         "cap_days",
+        "sample_count",
         "empirical_count",
         "empirical_mean_days",
         "empirical_p95_days",
@@ -141,13 +144,17 @@ def write_service_time_diagnostics(
         for stage in Stage:
             params = service_params.get(stage, {})
             stats = empirical_stats.get(stage, {})
+            sample_count = sample_counts.get(stage, 0)
+            sampling_mode = "empirical" if sample_count > 0 else "parametric"
             writer.writerow(
                 {
                     "stage": stage.value,
+                    "sampling_mode": sampling_mode,
                     "distribution": params.get("distribution", ""),
                     "parameters": params.get("parameters", {}),
                     "service_time_scale": service_time_scale,
                     "cap_days": service_time_caps.get(stage),
+                    "sample_count": sample_count,
                     "empirical_count": stats.get("count", 0.0),
                     "empirical_mean_days": stats.get("mean", 0.0),
                     "empirical_p95_days": stats.get("p95", 0.0),

@@ -190,3 +190,37 @@ def load_phase_duration_stats(path: str) -> Tuple[Dict[Stage, Dict[str, float]],
         }
 
     return stats, unit_scale
+
+
+def load_phase_duration_samples(path: str) -> Tuple[Dict[Stage, List[float]], float]:
+    if not os.path.exists(path):
+        return {}, 1.0
+    with open(path, newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+    if not rows:
+        return {}, 1.0
+
+    stage_columns = {
+        Stage.DEV: "dev_duration_hours",
+        Stage.REVIEW: "review_duration_hours",
+        Stage.TESTING: "testing_duration_hours",
+    }
+    unit_scale = 1.0 / 24.0 if any(col in reader.fieldnames for col in stage_columns.values()) else 1.0
+    samples: Dict[Stage, List[float]] = {}
+    for stage, column in stage_columns.items():
+        stage_samples: List[float] = []
+        for row in rows:
+            value = row.get(column)
+            if value is None or value == "":
+                continue
+            try:
+                numeric = float(value)
+            except ValueError:
+                continue
+            if numeric <= 0:
+                continue
+            stage_samples.append(numeric * unit_scale)
+        if stage_samples:
+            samples[stage] = stage_samples
+    return samples, unit_scale

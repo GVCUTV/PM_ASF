@@ -613,3 +613,26 @@
 **Limitations and assumptions**
 - The cap uses empirical percentiles and will clip rare extreme samples; this is intended to keep simulated timelines aligned with observed ETL data.
 - If `phase_durations.csv` is missing or empty, the simulation runs without caps or scaling and diagnostics will reflect empty empirical stats.
+
+---
+
+## Empirical Service-Time Sampling (Trace-Driven Option)
+
+**What it does**
+- Uses the empirical phase-duration samples from `etl/output/csv/phase_durations.csv` directly (trace-driven sampling) to generate service times, aligning simulation service times with observed data.
+- Falls back to the fitted parametric distributions when no empirical samples are available for a stage.
+
+**How it is implemented**
+- The runners load per-stage duration samples from the `*_duration_hours` columns and convert them to days (scale `1/24`).
+- Service times are drawn uniformly at random from the empirical sample list for each stage when available; caps remain in place as a safety check.
+- The diagnostics CSV includes a `sampling_mode` column and the `sample_count` to show whether a stage used empirical or parametric sampling.
+
+**How it must be used**
+1. Ensure `etl/output/csv/phase_durations.csv` exists and contains non-zero samples.
+2. Run the simulations as usual.
+3. Inspect the diagnostics:
+   - `simulation/finite_horizon/output/service_time_diagnostics.csv`
+   - `simulation/infinite_horizon/output/service_time_diagnostics.csv`
+
+**Limitations and assumptions**
+- Empirical sampling mirrors the historical dataset; it does not extrapolate beyond observed durations.

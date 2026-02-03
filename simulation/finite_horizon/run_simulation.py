@@ -14,6 +14,7 @@ from simulation.core.inputs import (
     load_developer_count,
     load_feedback_probabilities,
     load_phase_duration_stats,
+    load_phase_duration_samples,
     load_service_params,
     load_stint_pmf,
     load_transition_matrix,
@@ -54,6 +55,8 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
     service_time_caps = {
         stage: stats.get("p99") for stage, stats in phase_stats.items() if stats.get("p99")
     }
+    phase_samples, _ = load_phase_duration_samples(str(paths["phase_durations"]))
+    sample_counts = {stage: len(values) for stage, values in phase_samples.items()}
 
     rngs = RNGStreams(seed)
     developer_pool = DeveloperPool(transition_matrix, stint_pmf, developer_count, rngs.developer)
@@ -67,6 +70,7 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
         horizon=horizon,
         service_time_scale=service_time_scale,
         service_time_caps=service_time_caps,
+        service_time_samples=phase_samples,
     )
     engine = SimulationEngine(config, developer_pool, rngs, metrics)
     engine.run()
@@ -83,7 +87,12 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
     write_summary(summary, str(summary_path))
     diagnostics_path = output_dir / "service_time_diagnostics.csv"
     write_service_time_diagnostics(
-        phase_stats, service_params, service_time_scale, service_time_caps, str(diagnostics_path)
+        phase_stats,
+        service_params,
+        service_time_scale,
+        service_time_caps,
+        sample_counts,
+        str(diagnostics_path),
     )
 
 
