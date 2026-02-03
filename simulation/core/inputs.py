@@ -142,3 +142,51 @@ def load_developer_count(initial_count_path: str, events_path: str) -> int:
     raise InputDataError(
         "Developer count could not be inferred from initial_dev_count or developer_events"
     )
+
+
+def load_phase_duration_stats(path: str) -> Tuple[Dict[Stage, Dict[str, float]], float]:
+    if not os.path.exists(path):
+        return {}, 1.0
+    with open(path, newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+    if not rows:
+        return {}, 1.0
+
+    stage_columns = {
+        Stage.DEV: "dev_duration_hours",
+        Stage.REVIEW: "review_duration_hours",
+        Stage.TESTING: "testing_duration_hours",
+    }
+    stats: Dict[Stage, Dict[str, float]] = {}
+    unit_scale = 1.0 / 24.0 if any(col in reader.fieldnames for col in stage_columns.values()) else 1.0
+
+    for stage, column in stage_columns.items():
+        values = []
+        for row in rows:
+            value = row.get(column)
+            if value is None or value == "":
+                continue
+            try:
+                numeric = float(value)
+            except ValueError:
+                continue
+            if numeric <= 0:
+                continue
+            values.append(numeric * unit_scale)
+        if not values:
+            continue
+        values.sort()
+        count = len(values)
+        mean = sum(values) / count
+        p95_index = max(int(0.95 * count) - 1, 0)
+        p99_index = max(int(0.99 * count) - 1, 0)
+        stats[stage] = {
+            "count": float(count),
+            "mean": mean,
+            "p95": values[p95_index],
+            "p99": values[p99_index],
+            "max": values[-1],
+        }
+
+    return stats, unit_scale

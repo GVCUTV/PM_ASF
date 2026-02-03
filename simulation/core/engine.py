@@ -15,6 +15,8 @@ class SimulationConfig:
     feedback_testing: float
     service_params: Dict[Stage, Dict[str, Dict[str, float]]]
     horizon: float
+    service_time_scale: float = 1.0
+    service_time_caps: Optional[Dict[Stage, float]] = None
 
 
 class SimulationEngine:
@@ -111,15 +113,22 @@ class SimulationEngine:
         distribution = params["distribution"].lower()
         parameters = params["parameters"]
         if distribution == "lognormal":
-            return lognormal(self.rngs.services, parameters["mu"], parameters["sigma"])
-        if distribution == "weibull":
-            return weibull(self.rngs.services, parameters["shape"], parameters["scale"])
-        if distribution == "exponential":
+            service_time = lognormal(self.rngs.services, parameters["mu"], parameters["sigma"])
+        elif distribution == "weibull":
+            service_time = weibull(self.rngs.services, parameters["shape"], parameters["scale"])
+        elif distribution == "exponential":
             rate = parameters.get("rate") or parameters.get("lambda")
             if rate is None:
                 raise ValueError("Exponential parameters missing rate")
-            return exponential(self.rngs.services, float(rate))
-        raise ValueError(f"Unsupported distribution: {distribution}")
+            service_time = exponential(self.rngs.services, float(rate))
+        else:
+            raise ValueError(f"Unsupported distribution: {distribution}")
+        service_time *= self.config.service_time_scale
+        if self.config.service_time_caps and stage in self.config.service_time_caps:
+            cap = self.config.service_time_caps[stage]
+            if cap is not None:
+                service_time = min(service_time, cap)
+        return service_time
 
     def _handle_service_completion(self, event: Event) -> None:
         if event.ticket_id is None or event.stage is None:

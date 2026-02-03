@@ -587,3 +587,29 @@
 - Service-time distributions are assumed to be parametric fits (lognormal/Weibull/exponential) derived by ETL scripts.
 - Developer capacity changes are driven by the semi-Markov model; if capacity drops below busy servers, service continues but no new work starts until capacity is available.
 - Confidence intervals use a normal approximation over batch means (no external stats dependency).
+
+---
+
+## Simulation Input Calibration and Diagnostics (Service-Time Validation)
+
+**What it does**
+- Adds a calibration step that compares ETL phase-duration samples to the fitted service-time distributions and applies a conservative cap at the empirical 99th percentile to prevent unrealistic heavy-tail stalls.
+- Converts service-time samples from hours to days when phase-duration inputs are expressed in hours, keeping the simulation time unit consistent with the arrival rate (per day).
+- Writes a diagnostics CSV that reports the empirical statistics and the configured cap/scale values used during the run.
+
+**How it is implemented**
+- The runners load `etl/output/csv/phase_durations.csv` and compute per-stage empirical statistics (mean, p95, p99, max) from the `*_duration_hours` columns.
+- A service-time scale factor of `1/24` is applied when the input columns are in hours, ensuring all service times are in days.
+- The service-time cap is set to the empirical p99 (in days) for each stage; sampled service times above the cap are clipped.
+- Diagnostics are written to `service_time_diagnostics.csv` in each output folder, capturing the fitted distribution, parameters, scale, and empirical stats.
+
+**How it must be used**
+1. Ensure `etl/output/csv/phase_durations.csv` is available (produced by the phase-duration ETL scripts).
+2. Run either simulation script as usual.
+3. Review diagnostics output:
+   - `simulation/finite_horizon/output/service_time_diagnostics.csv`
+   - `simulation/infinite_horizon/output/service_time_diagnostics.csv`
+
+**Limitations and assumptions**
+- The cap uses empirical percentiles and will clip rare extreme samples; this is intended to keep simulated timelines aligned with observed ETL data.
+- If `phase_durations.csv` is missing or empty, the simulation runs without caps or scaling and diagnostics will reflect empty empirical stats.

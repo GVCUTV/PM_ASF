@@ -13,12 +13,13 @@ from simulation.core.inputs import (
     load_arrival_rate,
     load_developer_count,
     load_feedback_probabilities,
+    load_phase_duration_stats,
     load_service_params,
     load_stint_pmf,
     load_transition_matrix,
 )
 from simulation.core.metrics import MetricsCollector
-from simulation.core.outputs import write_summary, write_ticket_metrics
+from simulation.core.outputs import write_service_time_diagnostics, write_summary, write_ticket_metrics
 from simulation.core.rng import RNGStreams
 
 
@@ -30,6 +31,7 @@ def build_paths(repo_root: Path) -> dict:
         "stint_pmf": repo_root / "etl/output/csv/stint_PMF.csv",
         "service_params": repo_root / "data/state_parameters/service_params.json",
         "distribution_summary": repo_root / "etl/output/csv/distribution_summary.csv",
+        "phase_durations": repo_root / "etl/output/csv/phase_durations.csv",
         "initial_dev_count": repo_root / "etl/output/csv/initial_dev_count.csv",
         "developer_events": repo_root / "data/state_parameters/developer_events.csv",
     }
@@ -48,6 +50,10 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
     developer_count = load_developer_count(
         str(paths["initial_dev_count"]), str(paths["developer_events"])
     )
+    phase_stats, service_time_scale = load_phase_duration_stats(str(paths["phase_durations"]))
+    service_time_caps = {
+        stage: stats.get("p99") for stage, stats in phase_stats.items() if stats.get("p99")
+    }
 
     rngs = RNGStreams(seed)
     developer_pool = DeveloperPool(transition_matrix, stint_pmf, developer_count, rngs.developer)
@@ -59,6 +65,8 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
         feedback_testing=feedback_probs["testing_to_development"],
         service_params=service_params,
         horizon=horizon,
+        service_time_scale=service_time_scale,
+        service_time_caps=service_time_caps,
     )
     engine = SimulationEngine(config, developer_pool, rngs, metrics)
     engine.run()
@@ -73,6 +81,10 @@ def run_simulation(seed: int, horizon: float, output_dir: Path) -> None:
     summary["arrivals"] = float(metrics.arrivals)
     summary["developer_count"] = float(developer_count)
     write_summary(summary, str(summary_path))
+    diagnostics_path = output_dir / "service_time_diagnostics.csv"
+    write_service_time_diagnostics(
+        phase_stats, service_params, service_time_scale, service_time_caps, str(diagnostics_path)
+    )
 
 
 def main() -> None:

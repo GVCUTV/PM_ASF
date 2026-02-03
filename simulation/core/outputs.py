@@ -114,3 +114,44 @@ def write_confidence_intervals(batch_rows: List[Dict[str, float]], path: str) ->
             std = stdev(values) if len(values) > 1 else 0.0
             half_width = z * std / math.sqrt(len(values)) if len(values) > 1 else 0.0
             writer.writerow([metric, avg, std, avg - half_width, avg + half_width, len(values)])
+
+
+def write_service_time_diagnostics(
+    empirical_stats: Dict[Stage, Dict[str, float]],
+    service_params: Dict[Stage, Dict[str, Dict[str, float]]],
+    service_time_scale: float,
+    service_time_caps: Dict[Stage, float],
+    path: str,
+) -> None:
+    fieldnames = [
+        "stage",
+        "distribution",
+        "parameters",
+        "service_time_scale",
+        "cap_days",
+        "empirical_count",
+        "empirical_mean_days",
+        "empirical_p95_days",
+        "empirical_p99_days",
+        "empirical_max_days",
+    ]
+    with open(path, "w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for stage in Stage:
+            params = service_params.get(stage, {})
+            stats = empirical_stats.get(stage, {})
+            writer.writerow(
+                {
+                    "stage": stage.value,
+                    "distribution": params.get("distribution", ""),
+                    "parameters": params.get("parameters", {}),
+                    "service_time_scale": service_time_scale,
+                    "cap_days": service_time_caps.get(stage),
+                    "empirical_count": stats.get("count", 0.0),
+                    "empirical_mean_days": stats.get("mean", 0.0),
+                    "empirical_p95_days": stats.get("p95", 0.0),
+                    "empirical_p99_days": stats.get("p99", 0.0),
+                    "empirical_max_days": stats.get("max", 0.0),
+                }
+            )
