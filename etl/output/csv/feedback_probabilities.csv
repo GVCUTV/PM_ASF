@@ -1,0 +1,3 @@
+metric,tickets_with_signal,tickets_with_feedback,probability
+review_to_development,3336,567,0.169964
+testing_to_development,3336,68,0.020384
