@@ -318,6 +318,29 @@
   - `etl/output/csv/distribution_fit_stats_development.csv`
   - `etl/output/csv/distribution_fit_stats_review.csv`
   - `etl/output/csv/distribution_fit_stats_testing.csv`
+
+---
+
+## ETL Script: `etl/7_transition_matrix.py`
+
+**What it does**
+- Generates the OFF/DEV/REV/TEST transition probability matrix from Jira phase boundary timestamps and GitHub PR assignee mappings.
+- Writes the normalized transition matrix to a CSV in `etl/output/csv/`.
+
+**How it is implemented**
+- Reads `etl/output/csv/phase_durations.csv` and retains only Jira keys with complete phase timestamps (`dev_start_ts`, `review_start_ts`, `review_end_ts`, `testing_end_ts`).
+- Reads `etl/output/csv/github_prs_raw.csv`, extracts Jira keys from PR titles/bodies using the `BOOKKEEPER-<num>` regex, and maps them to PR assignees.
+- For each developer, builds ordered DEV/REV/TEST events per ticket, inserts OFF transitions for positive gaps between consecutive events, and counts transitions from OFF to the first observed state.
+- Converts transition counts to probabilities using Laplace smoothing (α = 1) and writes the row-normalized matrix to CSV.
+
+**How it must be used**
+- **Command:** `python etl/7_transition_matrix.py`
+- **Inputs:**
+  - `etl/output/csv/phase_durations.csv`
+  - `etl/output/csv/github_prs_raw.csv`
+- **Outputs:** `etl/output/csv/transition_matrix.csv`
+- **Configuration:** Paths are resolved via `path_config.PROJECT_ROOT`.
+- **Limitations:** Tickets with missing phase timestamps and PRs without assignees or Jira keys are excluded from the transition calculation.
   - `etl/output/csv/fit_summary.csv`
   - `etl/output/png/confronto_fit_resolution_time.png`
   - `etl/output/png/confronto_fit_development.png`
