@@ -1,0 +1,17 @@
+metric,value
+throughput_dev,0.38082191780821917
+utilization_dev,0.6589312743596533
+avg_queue_dev,0.7983208053946197
+throughput_review,0.15616438356164383
+utilization_review,1.3794506047349129
+avg_queue_review,28.975511267752115
+throughput_testing,0.0027397260273972603
+utilization_testing,9.048469750157624e-07
+avg_queue_testing,31.21945931190754
+feedback_rate_review,0.2631578947368421
+feedback_rate_testing,0.0
+closed_tickets,1.0
+mean_time_in_system,1.1128133680555556
+horizon_days,365.0
+arrivals,131.0
+developer_count,6.0
