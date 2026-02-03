@@ -274,6 +274,35 @@
 
 ---
 
+## ETL Script: `etl/8_stint_PMF.py` — Combined Stint PMF Output
+
+**What it does**
+- Computes empirical stint PMFs for `OFF/DEV/REV/TEST` and writes them into a single combined CSV table.
+- Uses the same per-developer event construction and stint rounding rules as the state-parameter extraction pipeline.
+
+**How it is implemented**
+- Loads `etl/output/csv/phase_durations.csv` to obtain per-ticket phase boundaries and `etl/output/csv/github_prs_raw.csv` to map Jira keys to PR assignees.
+- Builds per-developer DEV/REV/TEST events and derives OFF gaps, then rounds stint lengths (days) to a fixed precision before counting durations.
+- Normalizes duration counts per state to produce empirical PMFs and validates that probabilities sum to 1.0 within a tolerance.
+
+**How it must be used**
+1. Ensure Phase 3 ETL outputs exist:
+   - `etl/output/csv/phase_durations.csv`
+   - `etl/output/csv/github_prs_raw.csv`
+2. Run the script from the repository root:
+   - `python etl/8_stint_PMF.py`
+3. Review the combined output:
+   - `etl/output/csv/stint_PMF.csv`
+
+**Outputs and contracts**
+- Required output:
+  - `etl/output/csv/stint_PMF.csv` (columns: `state`, `length`, `prob`)
+- Limitations:
+  - Rows with missing timestamps or non-positive durations are skipped implicitly during stint construction.
+  - OFF stints are inferred only when there is a positive gap between consecutive events for a developer.
+
+---
+
 ## ETL Script: `etl/3_phase_duration_distribution_etl.py` — Distribution Parameters Output
 
 **What it does**
